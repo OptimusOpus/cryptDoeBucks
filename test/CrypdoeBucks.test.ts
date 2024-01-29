@@ -1,8 +1,10 @@
-import { reset } from '@nomicfoundation/hardhat-network-helpers';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers as tsEthers } from 'ethers';
+
 import { ethers } from 'hardhat';
 import { CrypdoeBucks, CrypdoeBucks__factory } from '../typechain-types';
+import { deployRandomNumberConsumerFixture } from './fixtures/RandomNumberConsumer';
 import { getEventData } from './utils';
 
 let CrypdoeBucksFactory: CrypdoeBucks__factory;
@@ -36,6 +38,9 @@ let deployerAddress: string;
 let user1Address: string;
 let user2Address: string;
 
+let vrfCoordinatorAddress: string;
+let randomConsumerAddress: string;
+
 describe('CrypdoeBucks', () => {
   before(async () => {
     [deployer, user1, user2] = await ethers.getSigners();
@@ -44,16 +49,19 @@ describe('CrypdoeBucks', () => {
 
     user2Address = await user2.getAddress();
 
-    // console.log(user1Address, user2Address, deployerAddress)
     // "https://token-cdn-domain/{id}.json"
-
-    CrypdoeBucksFactory = await await ethers.getContractFactory('CrypdoeBucks');
   });
 
   beforeEach(async () => {
-    await reset();
+    CrypdoeBucksFactory = await await ethers.getContractFactory('CrypdoeBucks');
+    const { randomNumberConsumerV2, VRFCoordinatorV2Mock } = await loadFixture(
+      deployRandomNumberConsumerFixture
+    );
 
-    crypdoeBucks = await CrypdoeBucksFactory.deploy();
+    vrfCoordinatorAddress = await VRFCoordinatorV2Mock.getAddress();
+    const randomConsumerAddress = await randomNumberConsumerV2.getAddress();
+
+    crypdoeBucks = await CrypdoeBucksFactory.deploy(randomConsumerAddress);
   });
 
   it('Should mint a buck to user', async () => {
@@ -73,9 +81,7 @@ describe('CrypdoeBucks', () => {
     const buckBalance = await crypdoeBucks.balanceOf(user1Address);
     const { points, fightingStyle, does } = await crypdoeBucks.bucks(0);
 
-    //console.log(receipt);
     // const uri: string = await crypdoeBucks.uri(1);
-    // console.log(uri);
     const event = getEventData('NewBuck', crypdoeBucks, receipt);
     expect(event?.args.id).to.equal(0n);
     expect(event?.args.to).to.equal(user1Address);
@@ -125,6 +131,8 @@ describe('CrypdoeBucks', () => {
 
     if (!receipt) return;
     event = getEventData('Fight', crypdoeBucks, receipt);
+
+    console.log(event?.args.doesMoved);
 
     if (event?.args.doesMoved == 4200000000) {
       // draw

@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 pragma abicoder v2;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "./IVRFv2Consumer.sol";
+
 contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
+    IVRFv2Consumer immutable VRF_CONTRACT;
+
     mapping(uint256 => string) idToIpfs;
     // Token id to owner
     mapping(uint => address) public buckToOwner;
@@ -42,13 +46,14 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
         _;
     }
 
-    constructor() ERC721("Crypto Bucks", "BUCK") {
+    constructor(address vrfCoordinator) ERC721("Crypto Bucks", "BUCK") {
         self = address(this);
         winMap[1] = 3;
         winMap[2] = 1;
         winMap[3] = 2;
         // Set this at 5 mins while we test
         cooldownTime = 300;
+        VRF_CONTRACT = IVRFv2Consumer(vrfCoordinator);
     }
 
     // Could turn this into an internal function if we want to do the random genereration onchain, public is expensive
