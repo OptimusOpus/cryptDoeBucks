@@ -1,6 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { assert, expect } from 'chai';
-import { ethers as tsEthers } from 'ethers';
 import { ethers } from 'hardhat';
 import {
   VRFCoordinatorV2Mock,
@@ -107,6 +106,7 @@ describe('Random Number Consumer Unit Tests', async function () {
         const { randomNumberConsumerV2, VRFCoordinatorV2Mock } =
           await loadFixture(deployRandomNumberConsumerFixture);
 
+        // eslint-disable-next-line no-async-promise-executor
         await new Promise<void>(async (resolve, reject) => {
           randomNumberConsumerV2.once(
             randomNumberConsumerV2.filters.RequestFulfilled(),

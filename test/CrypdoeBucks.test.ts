@@ -3,12 +3,18 @@ import { expect } from 'chai';
 import { ethers as tsEthers } from 'ethers';
 
 import { ethers } from 'hardhat';
-import { CrypdoeBucks, CrypdoeBucks__factory } from '../typechain-types';
+import {
+  CrypdoeBucks,
+  CrypdoeBucks__factory,
+  VRFCoordinatorV2Mock,
+  VRFv2Consumer,
+} from '../typechain-types';
 import { deployRandomNumberConsumerFixture } from './fixtures/RandomNumberConsumer';
 import { getEventData } from './utils';
 
 let CrypdoeBucksFactory: CrypdoeBucks__factory;
 let crypdoeBucks: CrypdoeBucks;
+// eslint-disable-next-line no-unused-vars
 let deployer: tsEthers.Signer;
 let user1: tsEthers.Signer;
 let user2: tsEthers.Signer;
@@ -34,12 +40,10 @@ const buck2: buck = {
   does: 1,
 };
 
-let deployerAddress: string;
 let user1Address: string;
 let user2Address: string;
-
-let vrfCoordinatorAddress: string;
-let randomConsumerAddress: string;
+let randomNumberConsumerV2: VRFv2Consumer;
+let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock;
 
 describe('CrypdoeBucks', () => {
   before(async () => {
@@ -53,15 +57,22 @@ describe('CrypdoeBucks', () => {
   });
 
   beforeEach(async () => {
-    CrypdoeBucksFactory = await await ethers.getContractFactory('CrypdoeBucks');
-    const { randomNumberConsumerV2, VRFCoordinatorV2Mock } = await loadFixture(
-      deployRandomNumberConsumerFixture
-    );
+    // Deploy RandomNumberConsumer contract and mock VRFCoordinatorV2
+    // Load fixtures
+    const fixtures = await loadFixture(deployRandomNumberConsumerFixture);
+    randomNumberConsumerV2 = fixtures.randomNumberConsumerV2; // Assign the value here without let or const
+    vrfCoordinatorV2Mock = fixtures.VRFCoordinatorV2Mock;
 
-    vrfCoordinatorAddress = await VRFCoordinatorV2Mock.getAddress();
     const randomConsumerAddress = await randomNumberConsumerV2.getAddress();
 
+    // Deploy CrypdoeBucks contract
+    CrypdoeBucksFactory = await await ethers.getContractFactory('CrypdoeBucks');
     crypdoeBucks = await CrypdoeBucksFactory.deploy(randomConsumerAddress);
+    const crypdoeBucksAddress = await crypdoeBucks.getAddress();
+
+    // Transfer ownership of RandomNumberConsumer to CrypdoeBucks
+    await randomNumberConsumerV2.transferOwnership(crypdoeBucksAddress);
+    await crypdoeBucks.acceptVRFOwnership();
   });
 
   it('Should mint a buck to user', async () => {
@@ -104,7 +115,6 @@ describe('CrypdoeBucks', () => {
       buck1.does
     );
 
-    const user2Address = await user2.getAddress();
     let receipt = await (
       await crypdoeBucks.createBuck(
         user2Address,
@@ -112,7 +122,7 @@ describe('CrypdoeBucks', () => {
         buck2.fightingStyle,
         buck2.does
       )
-    ).wait();
+    ).wait(1);
     expect(receipt).to.not.be.null;
 
     if (!receipt) return;
@@ -124,15 +134,42 @@ describe('CrypdoeBucks', () => {
     expect(event?.args.points).to.equal(buck2.points);
     expect(event?.args.does).to.equal(buck2.does);
 
+    //
+
     const { readyTime } = await crypdoeBucks.bucks(1);
+
+    receipt = await (
+      await crypdoeBucks.connect(user1).prepareForFight(0, 1)
+    ).wait(1);
+    expect(receipt).to.not.be.null;
+
+    if (!receipt) return;
+    event = getEventData('FightPending', crypdoeBucks, receipt);
+    // Get the requestId from the receipt so it can be used later in the fight function
+    const requestId = event?.args[2];
+
+    if (!randomNumberConsumerV2)
+      return console.error('No random number consumer');
+
+    // Call the mockVRFCoordinatorV2 to fulfill the request
+    const randomNumberConsumerV2Address =
+      await randomNumberConsumerV2.getAddress();
+
+    // simulate callback from the oracle network
+    await expect(
+      await vrfCoordinatorV2Mock.fulfillRandomWords(
+        requestId,
+        randomNumberConsumerV2Address
+      )
+    ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
+
+    // Normally this would be called by the oracle network and we would wait for the callback event before proceeding
 
     receipt = await (await crypdoeBucks.connect(user1).fight(0, 1)).wait(1);
     expect(receipt).to.not.be.null;
 
     if (!receipt) return;
     event = getEventData('Fight', crypdoeBucks, receipt);
-
-    console.log(event?.args.doesMoved);
 
     if (event?.args.doesMoved == 4200000000) {
       // draw
@@ -161,7 +198,6 @@ describe('CrypdoeBucks', () => {
       buck1.does
     );
 
-    const user2Address = await user2.getAddress();
     let receipt = await (
       await crypdoeBucks.createBuck(
         user2Address,
@@ -182,6 +218,33 @@ describe('CrypdoeBucks', () => {
     expect(event?.args.does).to.equal(buck2.does);
 
     const { readyTime } = await crypdoeBucks.bucks(0);
+
+    receipt = await (
+      await crypdoeBucks.connect(user2).prepareForFight(1, 0)
+    ).wait(1);
+    expect(receipt).to.not.be.null;
+
+    if (!receipt) return;
+    event = getEventData('FightPending', crypdoeBucks, receipt);
+    // Get the requestId from the receipt so it can be used later in the fight function
+    const requestId = event?.args[2];
+
+    if (!randomNumberConsumerV2)
+      return console.error('No random number consumer');
+
+    // Call the mockVRFCoordinatorV2 to fulfill the request
+    const randomNumberConsumerV2Address =
+      await randomNumberConsumerV2.getAddress();
+
+    // simulate callback from the oracle network
+    await expect(
+      await vrfCoordinatorV2Mock.fulfillRandomWords(
+        requestId,
+        randomNumberConsumerV2Address
+      )
+    ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
+
+    // Normally this would be called by the oracle network and we would wait for the callback event before proceeding
 
     receipt = await (await crypdoeBucks.connect(user2).fight(1, 0)).wait(1);
     expect(receipt).to.not.be.null;

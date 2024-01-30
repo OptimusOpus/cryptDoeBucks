@@ -17,6 +17,14 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
     // Mapping for fight styles
     mapping(uint32 => uint32) winMap;
 
+    struct PreFight {
+        uint32 defenderId;
+        uint256 randomRequestId;
+    }
+
+    // Mapping for pending fights
+    mapping(address => PreFight) pendingFights;
+
     address private immutable self;
     // Time until buck can fight again
     uint32 cooldownTime;
@@ -36,6 +44,8 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
 
     // TODO: How are the does dispured to begin with?
     // randomly to bucks?
+
+    event FightPending(uint attacker, uint defender, uint256 randomRequestId);
 
     event Fight(uint defender, uint attacker, uint32 doesMoved);
 
@@ -64,7 +74,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
         uint32 _fightingStyle,
         uint32 _does
     ) public onlyOwner returns (uint) {
-        bucks.push(Buck(_points, uint32(block.timestamp + cooldownTime), _fightingStyle, _does));
+        bucks.push(Buck(_points, uint32(block.timestamp), _fightingStyle, _does));
         uint id = bucks.length - 1;
         _mint(owner, id);
         buckToOwner[id] = owner;
@@ -77,16 +87,27 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
         bucks[id].readyTime = uint32(block.timestamp + cooldownTime);
     }
 
-    // Pseudo randomness generator
-    // Use Chainlink VRF instead if big dog money is being used.
-    function random(uint pseudo) private view returns (uint) {
-        return uint(keccak256(abi.encodePacked(block.difficulty, block.timestamp, pseudo)));
+    // Transfer VRF contract ownership
+    function transferVRFOwnership(address to) external onlyOwner {
+        // call transferOwnership on VRF contract
+        VRF_CONTRACT.transferOwnership(to);
+    }
+
+    // Accept VRF contract ownership
+    function acceptVRFOwnership() external onlyOwner {
+        // call acceptOwnership on VRF contract
+        VRF_CONTRACT.acceptOwnership();
+    }
+
+    // Request random number from VRF
+    function random() private returns (uint256) {
+        return VRF_CONTRACT.requestRandomWords();
     }
 
     // Add RND to power level
-    function powerLevel(uint id, uint32 points) private view returns (uint) {
+    function powerLevel(uint32 points, uint256 randomNumber) private pure returns (uint) {
         // Tune randomness from here
-        return random(id) % points ** 4;
+        return randomNumber % points ** 4;
     }
 
     // Returns if the attacker has style advantage
@@ -103,12 +124,31 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
         toBuck.does = toBuck.does + doesMoving;
     }
 
+    // Prepare for fight (request random number)
+    function prepareForFight(uint256 attackerId, uint256 defenderId) external onlyOwnerOf(attackerId) {
+        require(bucks[attackerId].readyTime <= block.timestamp, "Buck is not ready to fight.");
+        require(pendingFights[self].defenderId == 0, "Attacking buck already has a pending fight.");
+        uint256 randomRequestId = random();
+        pendingFights[self].defenderId = uint32(defenderId);
+        pendingFights[self].randomRequestId = randomRequestId;
+        emit FightPending(attackerId, defenderId, randomRequestId);
+    }
+
     // Fight function
     // Add modifier to make sure only buck owner makes call
     function fight(uint256 attackerId, uint256 defenderId) external onlyOwnerOf(attackerId) {
+        // Get random number from VRF
+        (bool fulfilled, uint256[] memory randomWords) = VRF_CONTRACT.getRequestStatus(
+            pendingFights[self].randomRequestId
+        );
+        require(fulfilled, "Random number not yet generated.");
+
+        // Reset pending fight
+        pendingFights[self].defenderId = 0;
+        pendingFights[self].randomRequestId = 0;
+
         Buck memory attackingBuck = bucks[attackerId];
         Buck memory defendingBuck = bucks[defenderId];
-        require(defendingBuck.does >= 1, "Defender has no does.");
 
         uint attackPower;
         uint defendPower;
@@ -127,8 +167,8 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
             }
         }
 
-        attackPower = powerLevel(attackerId, attackingBuckPoints);
-        defendPower = powerLevel(defenderId, defendingBuckPoints);
+        attackPower = powerLevel(attackingBuckPoints, randomWords[0]);
+        defendPower = powerLevel(defendingBuckPoints, randomWords[1]);
 
         // Who has more power?
         if (attackPower > defendPower) {
