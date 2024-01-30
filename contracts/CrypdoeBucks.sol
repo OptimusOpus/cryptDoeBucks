@@ -45,9 +45,9 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
     // TODO: How are the does dispured to begin with?
     // randomly to bucks?
 
-    event FightPending(uint attacker, uint defender, uint256 randomRequestId);
+    event FightInitiated(uint attacker, uint defender, uint256 randomRequestId);
 
-    event Fight(uint defender, uint attacker, uint32 doesMoved);
+    event FightConcluded(uint defender, uint attacker, uint32 doesMoved);
 
     event NewBuck(address to, uint id, uint32 points, uint32 fightingStyle, uint32 does);
 
@@ -131,7 +131,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
         uint256 randomRequestId = random();
         pendingFights[self].defenderId = uint32(defenderId);
         pendingFights[self].randomRequestId = randomRequestId;
-        emit FightPending(attackerId, defenderId, randomRequestId);
+        emit FightInitiated(attackerId, defenderId, randomRequestId);
     }
 
     // Fight function
@@ -175,15 +175,15 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable {
             // Attacker wins, transfer defenders does
             _triggerCooldown(attackerId);
             moveDoes(defenderId, attackerId);
-            emit Fight(defenderId, attackerId, defendingBuck.does);
+            emit FightConcluded(defenderId, attackerId, defendingBuck.does);
         } else if (attackPower == defendPower) {
             // No one wins, defender keeps does, attacker has no death risk and no cooldown
             // Hacky solution for a draw
-            emit Fight(defenderId, attackerId, 4200000000);
+            emit FightConcluded(defenderId, attackerId, 80085);
         } else if (attackPower < defendPower) {
             // Attacker loses, defender keeps does, attacker gets cooldown and death risk
             _triggerCooldown(attackerId);
-            emit Fight(defenderId, attackerId, 0);
+            emit FightConcluded(defenderId, attackerId, 0);
         }
         // emit an event and return a value?
     }

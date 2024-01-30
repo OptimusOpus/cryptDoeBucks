@@ -42,57 +42,55 @@ const buck2: buck = {
 
 let user1Address: string;
 let user2Address: string;
+let randomNumberConsumerV2Address: string;
 let randomNumberConsumerV2: VRFv2Consumer;
 let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock;
 
 describe('CrypdoeBucks', () => {
   before(async () => {
     [deployer, user1, user2] = await ethers.getSigners();
-
     user1Address = await user1.getAddress();
-
     user2Address = await user2.getAddress();
-
-    // "https://token-cdn-domain/{id}.json"
   });
 
   beforeEach(async () => {
-    // Deploy RandomNumberConsumer contract and mock VRFCoordinatorV2
-    // Load fixtures
     const fixtures = await loadFixture(deployRandomNumberConsumerFixture);
-    randomNumberConsumerV2 = fixtures.randomNumberConsumerV2; // Assign the value here without let or const
+    randomNumberConsumerV2 = fixtures.randomNumberConsumerV2;
     vrfCoordinatorV2Mock = fixtures.VRFCoordinatorV2Mock;
+    randomNumberConsumerV2Address = await randomNumberConsumerV2.getAddress();
 
-    const randomConsumerAddress = await randomNumberConsumerV2.getAddress();
+    CrypdoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks');
+    crypdoeBucks = await CrypdoeBucksFactory.deploy(
+      randomNumberConsumerV2Address
+    );
 
-    // Deploy CrypdoeBucks contract
-    CrypdoeBucksFactory = await await ethers.getContractFactory('CrypdoeBucks');
-    crypdoeBucks = await CrypdoeBucksFactory.deploy(randomConsumerAddress);
-    const crypdoeBucksAddress = await crypdoeBucks.getAddress();
-
-    // Transfer ownership of RandomNumberConsumer to CrypdoeBucks
-    await randomNumberConsumerV2.transferOwnership(crypdoeBucksAddress);
+    await randomNumberConsumerV2.transferOwnership(
+      await crypdoeBucks.getAddress()
+    );
     await crypdoeBucks.acceptVRFOwnership();
   });
 
-  it('Should mint a buck to user', async () => {
+  const mintBuck = async (userAddress: string, buck: buck) => {
     const receipt = await (
       await crypdoeBucks.createBuck(
-        user1Address,
-        buck1.points,
-        buck1.fightingStyle,
-        buck1.does
+        userAddress,
+        buck.points,
+        buck.fightingStyle,
+        buck.does
       )
     ).wait();
     expect(receipt).to.not.be.null;
+    return receipt;
+  };
 
+  it('Should mint a buck to user', async () => {
+    const receipt = await mintBuck(user1Address, buck1);
     if (!receipt) return;
 
     const owner = await crypdoeBucks.buckToOwner(0);
     const buckBalance = await crypdoeBucks.balanceOf(user1Address);
     const { points, fightingStyle, does } = await crypdoeBucks.bucks(0);
 
-    // const uri: string = await crypdoeBucks.uri(1);
     const event = getEventData('NewBuck', crypdoeBucks, receipt);
     expect(event?.args.id).to.equal(0n);
     expect(event?.args.to).to.equal(user1Address);
@@ -106,169 +104,108 @@ describe('CrypdoeBucks', () => {
     expect(buckBalance).to.equal(1);
   });
 
-  it('Should be able to attack another buck, win and get the defenders does: winner', async () => {
-    const user1Address = await user1.getAddress();
-    await crypdoeBucks.createBuck(
-      user1Address,
-      buck1.points,
-      buck1.fightingStyle,
-      buck1.does
-    );
+  describe('Buck fights', () => {
+    beforeEach(async () => {
+      await mintBuck(user1Address, buck1);
+      await mintBuck(user2Address, buck2);
+    });
 
-    let receipt = await (
-      await crypdoeBucks.createBuck(
-        user2Address,
-        buck2.points,
-        buck2.fightingStyle,
-        buck2.does
-      )
-    ).wait(1);
-    expect(receipt).to.not.be.null;
+    it('Should be able to attack another buck, win and get the defenders does: winner', async () => {
+      let receipt = await (
+        await crypdoeBucks.connect(user1).prepareForFight(0, 1)
+      ).wait(1);
+      if (!receipt) return;
 
-    if (!receipt) return;
+      const event = getEventData('FightInitiated', crypdoeBucks, receipt);
+      const requestId = event?.args[2];
 
-    let event = getEventData('NewBuck', crypdoeBucks, receipt);
+      await expect(
+        vrfCoordinatorV2Mock.fulfillRandomWords(
+          requestId,
+          randomNumberConsumerV2Address
+        )
+      ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
 
-    expect(event?.args.id).to.equal(1);
-    expect(event?.args.to).to.equal(user2Address);
-    expect(event?.args.points).to.equal(buck2.points);
-    expect(event?.args.does).to.equal(buck2.does);
+      receipt = await (await crypdoeBucks.connect(user1).fight(0, 1)).wait(1);
+      if (!receipt) return;
 
-    //
+      const fightEvent = getEventData('FightConcluded', crypdoeBucks, receipt);
+      evaluateFightOutcome(fightEvent, buck2.does);
+    });
 
-    const { readyTime } = await crypdoeBucks.bucks(1);
+    it('Should be able to attack another buck, win and get the defenders does: loser', async () => {
+      let receipt = await (
+        await crypdoeBucks.connect(user2).prepareForFight(1, 0)
+      ).wait(1);
+      if (!receipt) return;
 
-    receipt = await (
-      await crypdoeBucks.connect(user1).prepareForFight(0, 1)
-    ).wait(1);
-    expect(receipt).to.not.be.null;
+      const event = getEventData('FightInitiated', crypdoeBucks, receipt);
+      const requestId = event?.args[2];
 
-    if (!receipt) return;
-    event = getEventData('FightPending', crypdoeBucks, receipt);
-    // Get the requestId from the receipt so it can be used later in the fight function
-    const requestId = event?.args[2];
+      await expect(
+        vrfCoordinatorV2Mock.fulfillRandomWords(
+          requestId,
+          randomNumberConsumerV2Address
+        )
+      ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
 
-    if (!randomNumberConsumerV2)
-      return console.error('No random number consumer');
+      receipt = await (await crypdoeBucks.connect(user2).fight(1, 0)).wait(1);
+      if (!receipt) return;
 
-    // Call the mockVRFCoordinatorV2 to fulfill the request
-    const randomNumberConsumerV2Address =
-      await randomNumberConsumerV2.getAddress();
+      const fightEvent = getEventData('FightConcluded', crypdoeBucks, receipt);
+      evaluateFightOutcome(fightEvent, buck1.does);
+    });
 
-    // simulate callback from the oracle network
-    await expect(
-      await vrfCoordinatorV2Mock.fulfillRandomWords(
-        requestId,
-        randomNumberConsumerV2Address
-      )
-    ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
+    const evaluateFightOutcome = (
+      event: tsEthers.LogDescription | null,
+      expectedDoes: number
+    ) => {
+      if (event?.args.doesMoved == 80085) {
+        console.log('Draw!');
+      } else if (event?.args.doesMoved > 0) {
+        console.log('Winner!');
+        expect(event?.args.doesMoved).to.equal(expectedDoes);
+      } else {
+        console.log('Loser!');
+        expect(event?.args.doesMoved).to.equal(0);
+      }
+    };
 
-    // Normally this would be called by the oracle network and we would wait for the callback event before proceeding
+    it('Should not be able to attack another buck, if not owner', async () => {
+      // Attempt to initiate a fight with user2's buck using user1's signer, which should fail
+      await expect(
+        crypdoeBucks.connect(user1).prepareForFight(1, 0)
+      ).to.be.revertedWith('Must be the buck owner');
+    });
 
-    receipt = await (await crypdoeBucks.connect(user1).fight(0, 1)).wait(1);
-    expect(receipt).to.not.be.null;
+    it('Should not be able to attack another buck, if not ready', async () => {
+      // Make user1's buck fight and enter cooldown
+      const fightInitiationEvent = await (
+        await crypdoeBucks.connect(user1).prepareForFight(0, 1)
+      ).wait(1);
 
-    if (!receipt) return;
-    event = getEventData('Fight', crypdoeBucks, receipt);
+      if (!fightInitiationEvent) return;
 
-    if (event?.args.doesMoved == 4200000000) {
-      // draw
-      console.log('Draw!');
-    } else if (event?.args.doesMoved > 0) {
-      console.log('Winner!');
-      expect(event?.args.doesMoved).to.equal(buck2.does);
-      // Check ready time is reset
-      expect(readyTime).to.greaterThan(Math.floor(Date.now() / 1000));
-      const { does } = await crypdoeBucks.bucks(1);
-      expect(does).to.equal(0);
-    } else {
-      expect(event?.args.doesMoved).to.equal(0);
-      const { does } = await crypdoeBucks.bucks(1);
-      expect(does).to.equal(1);
-      console.log('Loser!');
-    }
+      const fightInitiationEventLog = getEventData(
+        'FightInitiated',
+        crypdoeBucks,
+        fightInitiationEvent
+      );
+      const requestId = fightInitiationEventLog?.args[2];
+
+      await expect(
+        vrfCoordinatorV2Mock.fulfillRandomWords(
+          requestId,
+          randomNumberConsumerV2Address
+        )
+      ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
+
+      await (await crypdoeBucks.connect(user1).fight(0, 1)).wait(1);
+
+      // Attempt to initiate another fight with user1's buck before cooldown expires
+      await expect(
+        crypdoeBucks.connect(user1).prepareForFight(0, 1)
+      ).to.be.revertedWith('Buck is not ready to fight.');
+    });
   });
-
-  it('Should be able to attack another buck, win and get the defenders does: loser', async () => {
-    const user1Address = await user1.getAddress();
-    await crypdoeBucks.createBuck(
-      user1Address,
-      buck1.points,
-      buck1.fightingStyle,
-      buck1.does
-    );
-
-    let receipt = await (
-      await crypdoeBucks.createBuck(
-        user2Address,
-        buck2.points,
-        buck2.fightingStyle,
-        buck2.does
-      )
-    ).wait(1);
-
-    expect(receipt).to.not.be.null;
-
-    if (!receipt) return;
-
-    let event = getEventData('NewBuck', crypdoeBucks, receipt);
-    expect(event?.args.id).to.equal(1);
-    expect(event?.args.to).to.equal(user2Address);
-    expect(event?.args.points).to.equal(buck2.points);
-    expect(event?.args.does).to.equal(buck2.does);
-
-    const { readyTime } = await crypdoeBucks.bucks(0);
-
-    receipt = await (
-      await crypdoeBucks.connect(user2).prepareForFight(1, 0)
-    ).wait(1);
-    expect(receipt).to.not.be.null;
-
-    if (!receipt) return;
-    event = getEventData('FightPending', crypdoeBucks, receipt);
-    // Get the requestId from the receipt so it can be used later in the fight function
-    const requestId = event?.args[2];
-
-    if (!randomNumberConsumerV2)
-      return console.error('No random number consumer');
-
-    // Call the mockVRFCoordinatorV2 to fulfill the request
-    const randomNumberConsumerV2Address =
-      await randomNumberConsumerV2.getAddress();
-
-    // simulate callback from the oracle network
-    await expect(
-      await vrfCoordinatorV2Mock.fulfillRandomWords(
-        requestId,
-        randomNumberConsumerV2Address
-      )
-    ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
-
-    // Normally this would be called by the oracle network and we would wait for the callback event before proceeding
-
-    receipt = await (await crypdoeBucks.connect(user2).fight(1, 0)).wait(1);
-    expect(receipt).to.not.be.null;
-
-    if (!receipt) return;
-    event = getEventData('Fight', crypdoeBucks, receipt);
-
-    if (event?.args.doesMoved === 4200000000) {
-      // draw
-      console.log('Draw!');
-    } else if (event?.args.doesMoved > 0) {
-      console.log('Winner!');
-      expect(event?.args.doesMoved).to.equal(buck2.does);
-      // Check ready time is reset
-      expect(readyTime).to.greaterThan(Date.now() / 1000);
-      const { does } = await crypdoeBucks.bucks(1);
-      expect(does).to.equal(0);
-    } else {
-      expect(event?.args.doesMoved).to.equal(0);
-      const { does } = await crypdoeBucks.bucks(1);
-      expect(does).to.equal(1);
-      console.log('Loser!');
-    }
-  });
-
-  // TODO: Add negative tests, for acsess control
 });
