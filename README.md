@@ -1,10 +1,32 @@
-# Coverage Report
+# CrypdoeBucks Contract Overview
+
+CrypdoeBucks is a blockchain-based game implemented as a smart contract on any EVM. It utilizes ERC721 tokens to represent unique digital assets called "bucks." Players can engage in battles, and participate in the breeding season to win a portion of the prize pool based on their performance. I made this for fun and to show ERC721 tokens can be used for more then 16 bit pieces of art.
+
+### Key Features
+
+- **ERC721 Implementation**: Each buck is a unique, non-fungible token with specific attributes such as points, fighting style, and the number of does (female deer) it controls.
+- **Fighting Mechanism**: Bucks can engage in battles with each other, with outcomes determined by their attributes and a random number generator for fairness.
+- **Seasonal Competitions**: The game unfolds in distinct seasons, with bucks concluding their competitive season and receiving rewards from the prize pool for their performance prior to the close of the mating season.
+- **ReentrancyGuard**: Ensures secure transactions to prevent reentrancy attacks.
+- **Ownership and Access Control**: Utilizes OpenZeppelin's `Ownable` contract to manage ownership and restricted access functionalities.
+
+### Future Enhancements
+
+- **Sales Contract**: Develop a contract that helps with the sale of the bucks. This could also use the random number generation to ensure a fair minting process.
+- **PaymentSplitter**: Handle Price Pool with a separate funds contract, like OpenZeppelin's PaymentSplitter.
+- **Improve Efficiency**: This is a proof of concept for fun, as such I didn't spend heaps of time making things cheaper. The primary target for this is the random number generation. Perhaps I could request a whole bunch of random numbers in such a way that only the contract knows them (like caching). As long as you can prove those numbers were secret prior to the fight to any potential players, then it is fair and cheaper.
+- **Gameplay Expansion**: Introduce new attributes and mechanics to enrich the gameplay.
+- **Generative Artwork**: Art generated with the random seed from minting, maybe using AI!
+- **Frontend Integration**: Develop a user-friendly interface to interact with the contract. Probably with Next.js, but I have been hearing good things about Vue.js too.
+- **Security Audits**: Conduct thorough audits to ensure contract security and reliability.
+
+## Coverage Report
 
 | Statements                                                                               | Functions                                                                              | Lines                                                                          |
 | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | ![Statements](https://img.shields.io/badge/statements-100%25-brightgreen.svg?style=flat) | ![Functions](https://img.shields.io/badge/functions-100%25-brightgreen.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-100%25-brightgreen.svg?style=flat) |
 
-# Prerequisites
+## Prerequisites
 
 - Docker
 
@@ -19,7 +41,7 @@ yarn run build    # install solc and other tools in the docker image
 
 Don't forget to copy the .env.example file to a file named .env, and then edit it to fill in the details.
 
-# Running all the tests
+## Running all the tests
 
 ```shell
 yarn run test
@@ -28,7 +50,7 @@ yarn run test:fresh       # force compile and then run tests
 yarn run test:coverage    # run tests with coverage reports
 ```
 
-# Formatters & Linters
+## Formatters & Linters
 
 You can use the below packages,
 
@@ -41,7 +63,7 @@ yarn run format
 yarn run lint
 ```
 
-# Analyzers
+## Analyzers
 
 You can use the below tools,
 
@@ -54,7 +76,7 @@ yarn run analyze:security path/to/contract
 yarn run analyze:all path/to/contract
 ```
 
-# Deploy Contract & Verification
+## Deploy Contract & Verification
 
 To try out Etherscan verification, you first need to deploy a contract to an Ethereum network that's supported by Etherscan, such as Sepolia.
 
@@ -80,7 +102,7 @@ And then verify it:
 yarn run verify sepolia <DEPLOYED_CONTRACT_ADDRESS> "<CONSTRUCTOR_ARGUMENT(S)>"    # hardhat.config.ts to see all networks
 ```
 
-# Finder
+## Finder
 
 ```shell
 yarn run finder --path contracts/Workshop.sol --name Workshop abi --colorify --compact --prettify    # find contract outputs of specific contract
@@ -90,7 +112,7 @@ yarn run finder --path contracts/Workshop.sol --name Workshop abi --colorify --c
 yarn run finder --help    # see all supported outputs (abi, metadata, bytecode and more than 20+ outputs)
 ```
 
-# Storage Vault
+## Storage Vault
 
 ```shell
 yarn run storage:lock    # create storage layout for all contracts
@@ -108,7 +130,7 @@ yarn run storage:check    # check storage layout for all contracts by comparing 
 yarn run storage:check --help    # see all supported options
 ```
 
-# Miscellaneous
+## Miscellaneous
 
 ```shell
 yarn run generate:docs    # generate docs according to the contracts/ folder
