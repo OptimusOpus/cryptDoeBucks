@@ -1,9 +1,36 @@
 # CrypdoeBucks Contract Overview
+![og_cryptoBuck](https://github.com/OptimusOpus/cryptDoeBucks/assets/34178563/a35e8002-94b4-4c3c-8489-90c105c958fb)
 
 CrypdoeBucks is a blockchain-based game implemented as a smart contract on any EVM. It utilizes ERC721 tokens to represent unique digital assets called "bucks." Players can engage in battles, and participate in the breeding season to win a portion of the prize pool based on their performance. I made this for fun and to show ERC721 tokens can be used for more then 16 bit pieces of art.
 
+The envisioned goal unfolds as follows: Each buck, upon its inception, is imbued with attributes randomly assigned by the Chainlink VRF (Verifiable Random Function), with the minting process financed by a player's fee in the EVM's native currency (e.g., ETH). Moving forward, my plan is to introduce a nominal operator fee. This fee is intended to cover the VRF call costs and to facilitate a modest profit margin. Such contributions will be pooled together to form the prize fund. Before the season draws to a close, buck owners are empowered to finalize their season using the endSeason function. This maneuver allows for the exchange of the buck's doe count for a corresponding slice of the prize pool, based on the total doe count, while simultaneously retiring the buck token. By way of example, consider a situation with a total of 1,000 does and a prize pool amounting to 10 ETH. Should an owner of a buck with a herd of 100 does (representing 10% of the overall doe population) decide to conclude their season, they would receive 1 ETH from the pool in exchange for retiring their buck.
+
+Bucks have the option to immediately capitalize on their does, but for those seeking greater thrills, there are does ripe for the taking. Bucks can challenge any other buck as often as they like until they secure a victory, after which they must observe a brief cooldown period to recuperate. This cooldown not only gives your buck a well-deserved rest but also curtails spam attacks and levels the playing field for players across different time zones, encouraging the ownership of multiple bucks.
+
+During an attack, the aggressor buck has an inherent advantage, safeguarding its does regardless of the battle's outcome. This strategic move ensures that even in defeat, the attacker's does remain secure, hidden away from the fray. However, victory for the attacker means claiming all the does from the vanquished defender, leaving the defender to tend to their wounds.
+
+#### Three critical elements influence the battle's outcome:
+
+- **Inherent Power**: Determined at the time of minting, a buck's points reflect its core strength, a static attribute that sets the foundation for its combat capabilities.
+- **Fighting Style**: Each buck adopts a fighting style that can provide a tactical edge. With styles like "Brawler," "Tactician," and "Swift Hoof" forming a rock-paper-scissors dynamic, the advantage goes to the buck whose style trumps the opponent's, regardless of whether they're attacking or defending. Envisioning more complex fighting styles could add intriguing layers to the game.
+- **Chainlink VRF**: This call infuses the game with a layer of provable randomness, ensuring that battles remain unpredictable and thrilling. Even a buck with lesser power can emerge victorious against a stronger adversary if the style matchup and randomness swing in its favor.
+  
+This intricate blend of strategy, chance, and valor makes for a dynamic and engaging gameplay experience, where every buck, regardless of its initial strength, stands a chance to rise to glory.
+
+I think this gameplay element adds a fascinating layer of strategy and risk assessment. By accumulating does, a buck enhances its potential share of the prize pool, yet simultaneously becomes a more enticing target for rivals. This dynamic forces players to carefully consider the optimal moment to conclude their season, balancing the desire for a larger prize against the escalating risk of being challenged.
+
+To further enrich this strategic depth, introducing an experience points (XP) system could provide an additional dimension. Here's how it could work:
+
+- **Experience Points (XP)**: Bucks earn XP for each successful fight, with the amount potentially varying based on the strength of the opponent or the odds overcome during the battle.
+- **Leveling Up**: Accumulating a certain amount of XP would allow a buck to "level up," enhancing its inherent power or unlocking new abilities. This progression system would encourage players to engage in battles to strengthen their bucks.
+- **Strategic Decisions**: With the introduction of XP and leveling, players must make even more nuanced decisions. They must weigh the benefits of potentially increasing their buck's power against the risks of attracting attention from formidable challengers.
+- **Skill Development**: Beyond mere strength enhancements, leveling up could allow bucks to develop unique skills or improve their fighting styles, offering strategic advantages in battles.
+
+By integrating an XP system, the game would not only incentivize active participation in battles but also introduce a long-term development aspect for each buck, making the gameplay more engaging and the strategic decisions more impactful.
+
 ### Key Features
 
+- **ChainLink's VRF**: Verified randomness on chain.
 - **ERC721 Implementation**: Each buck is a unique, non-fungible token with specific attributes such as points, fighting style, and the number of does (female deer) it controls.
 - **Fighting Mechanism**: Bucks can engage in battles with each other, with outcomes determined by their attributes and a random number generator for fairness.
 - **Seasonal Competitions**: The game unfolds in distinct seasons, with bucks concluding their competitive season and receiving rewards from the prize pool for their performance prior to the close of the mating season.
