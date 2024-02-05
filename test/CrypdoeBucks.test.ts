@@ -12,6 +12,7 @@ import {
 import { deployRandomNumberConsumerFixture } from './fixtures/RandomNumberConsumer';
 import { getEventData } from './utils';
 
+const scalefactor = 10n ** 18n;
 let CrypdoeBucksFactory: CrypdoeBucks__factory;
 let crypdoeBucks: CrypdoeBucks;
 // eslint-disable-next-line no-unused-vars
@@ -40,11 +41,28 @@ const buck2: buck = {
   does: 1,
 };
 
+// We would never mint a buck with 0 does, but for testing purposes this is convenient
+const buck3: buck = {
+  points: 2,
+  readyTime: 0,
+  fightingStyle: 2,
+  does: 0,
+};
+
+const buck4: buck = {
+  points: 2,
+  readyTime: 0,
+  fightingStyle: 2,
+  does: 30,
+};
+
 let user1Address: string;
 let user2Address: string;
 let randomNumberConsumerV2Address: string;
+let crypdoeBucksAddress: string;
 let randomNumberConsumerV2: VRFv2Consumer;
 let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock;
+const prizePool = ethers.parseEther('1'); // Example prize pool setup
 
 describe('CrypdoeBucks', () => {
   before(async () => {
@@ -59,15 +77,31 @@ describe('CrypdoeBucks', () => {
     vrfCoordinatorV2Mock = fixtures.VRFCoordinatorV2Mock;
     randomNumberConsumerV2Address = await randomNumberConsumerV2.getAddress();
 
+    const matingSeasonEnd = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days from now in seconds
     CrypdoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks');
     crypdoeBucks = await CrypdoeBucksFactory.deploy(
-      randomNumberConsumerV2Address
+      randomNumberConsumerV2Address,
+      matingSeasonEnd
     );
+
+    crypdoeBucksAddress = await crypdoeBucks.getAddress();
 
     await randomNumberConsumerV2.transferOwnership(
       await crypdoeBucks.getAddress()
     );
     await crypdoeBucks.acceptVRFOwnership();
+
+    // deployer funds the contract with some ETH
+    await deployer.sendTransaction({
+      to: crypdoeBucksAddress,
+      value: prizePool,
+    });
+
+    expect(crypdoeBucks).to.not.be.undefined;
+    // expect the contract to have some ETH
+    expect(await ethers.provider.getBalance(crypdoeBucksAddress)).to.equal(
+      prizePool
+    );
   });
 
   const mintBuck = async (userAddress: string, buck: buck) => {
@@ -206,6 +240,74 @@ describe('CrypdoeBucks', () => {
       await expect(
         crypdoeBucks.connect(user1).prepareForFight(0, 1)
       ).to.be.revertedWith('Buck is not ready to fight.');
+    });
+  });
+
+  describe('Ending the season', function () {
+    let maxDoeCount: bigint;
+    beforeEach(async function () {
+      // Setup initial state, including minting bucks and setting up prize pool
+      await mintBuck(user1Address, buck1);
+      await mintBuck(user2Address, buck2);
+      await mintBuck(user2Address, buck3);
+      await mintBuck(user2Address, buck4);
+
+      maxDoeCount = await crypdoeBucks.maxDoeCount();
+      const expectedMaxDoeCount = 100n; // Example total does setup
+      expect(maxDoeCount).to.equal(expectedMaxDoeCount);
+    });
+
+    it('Should revert if non-owner tries to end season', async function () {
+      await expect(crypdoeBucks.connect(user2).endSeason(0)).to.be.revertedWith(
+        'Must be the buck owner'
+      );
+    });
+
+    it('Should revert if buck does count is 0', async function () {
+      // User2 Gives approval to the contract to burn their buck
+      await crypdoeBucks.connect(user2).approve(crypdoeBucksAddress, 2);
+      // User2 burns their buck
+      await expect(crypdoeBucks.connect(user2).endSeason(2)).to.be.revertedWith(
+        'Buck does count is 0.'
+      );
+    });
+
+    it('Should transfer correct prize pool percentage to buck owner', async function () {
+      const prizePoolPercentage =
+        (BigInt(buck1.does) * scalefactor) / maxDoeCount;
+
+      // Assuming buck1 has 10 does, making it 10% of total does
+      const expectedPrize = (prizePool * prizePoolPercentage) / scalefactor;
+
+      // Track the prize pool balance before the prize is awarded
+      const initialPrizePool = await crypdoeBucks.prizePool();
+
+      expect(initialPrizePool).to.equal(prizePool);
+
+      // User1 Gives approval to the contract to burn their buck
+      await crypdoeBucks.connect(user1).approve(crypdoeBucksAddress, 0);
+
+      // User1 burns their buck
+      const receipt = await (
+        await crypdoeBucks.connect(user1).endSeason(0)
+      ).wait();
+
+      if (!receipt) return;
+
+      const event = getEventData('EndSeason', crypdoeBucks, receipt);
+
+      // Check the user received the correct prize
+      expect(event?.args[0]).to.equal(0);
+      expect(event?.args[1]).to.equal(690000000000000000n);
+
+      // Track prize pool balance after the prize is awarded
+      const finalPrizePool = await crypdoeBucks.prizePool();
+
+      // Check if the prize pool has been updated correctly
+      expect(initialPrizePool - finalPrizePool).to.equal(expectedPrize);
+
+      // Check if the buck has been burned by querying its owner, which should revert
+      await expect(crypdoeBucks.ownerOf(0)).to.be.reverted;
     });
   });
 });
