@@ -3,6 +3,185 @@
 
 CrypdoeBucks is a blockchain-based game implemented as a smart contract on any EVM. It utilizes ERC721 tokens to represent unique digital assets called "bucks." Players can engage in battles, and participate in the breeding season to win a portion of the prize pool based on their performance. I made this for fun and to show ERC721 tokens can be used for more then 16 bit pieces of art.
 
+## Smart Contract Architecture
+
+The CryptDoeBucks project is built with a modular architecture using several interacting smart contracts. Below is a detailed explanation of each contract and their roles in the system:
+
+### CrypdoeBucks.sol
+
+The main contract that implements the ERC721 token standard with game mechanics for the bucks.
+
+**Key Functionality:**
+- **Buck Creation**: Mints new buck NFTs with randomized attributes (points, fighting style, and does)
+- **Fighting Mechanism**: Allows bucks to challenge each other in battles
+- **Experience System**: Bucks earn XP for fighting and can level up to gain advantages
+- **Training & Breeding**: Functionality to improve buck attributes and breed them to create offspring
+- **Season Management**: Handles the process of ending a buck's season to claim rewards from the prize pool
+
+**Contract Inheritance:**
+- `ERC721`: Base NFT functionality
+- `ERC721Burnable`: Allows tokens to be burned
+- `ERC721URIStorage`: Manages token metadata URIs
+- `Ownable`: Access control for owner-only functions
+- `ReentrancyGuard`: Prevents reentrancy attacks
+- `Pausable`: Allows emergency pause of contract functionality
+
+**Key Data Structures:**
+- `Buck`: Struct storing buck attributes (points, readyTime, fightingStyle, does, experience, level, genetics, hasSpecialAbility)
+- `Genetics`: Struct storing inherited traits (strength, speed, vitality, intelligence)
+
+**External Contract Interactions:**
+- Calls VRFv2Consumer for randomness in fights and breeding
+- Interacts with PrizePool for managing rewards
+
+### FightLib.sol
+
+A library contract containing the logic for buck fights, extracted from the main contract to reduce its size.
+
+**Key Functionality:**
+- **Fighting Style Calculations**: Implements rock-paper-scissors style advantage system
+- **Power Level Calculations**: Computes buck power for fight outcomes based on attributes and randomness
+- **Critical Hit System**: Determines when bucks land a critical hit during combat
+- **Special Ability System**: Logic for activating buck special abilities during fights
+
+**Implementation Details:**
+- Uses pure functions for calculations to save gas
+- No state variables - operates only on input parameters
+- Implements complex power level algorithms that factor in buck attributes and randomness
+
+### PrizePool.sol
+
+Manages the economic aspects of the game, including the prize pool distribution and various costs.
+
+**Key Functionality:**
+- **Prize Management**: Tracks and distributes the prize pool based on buck performance
+- **Fee Collection**: Collects fees for training, breeding and other actions
+- **Seasonal Rewards**: Calculates and distributes rewards at the end of mating seasons
+- **Cost Management**: Sets and updates costs for various actions in the game
+
+**Security Features:**
+- `ReentrancyGuard`: Prevents reentrancy attacks during fund transfers
+- `Pausable`: Allows emergency pause of functionality
+- `Ownable`: Access control for admin functions
+
+**External Contract Interactions:**
+- Called by CrypdoeBucks.sol to update doe counts and award prizes
+- Only the registered buck contract can call certain sensitive functions
+
+### VRFv2Consumer.sol
+
+Provides verifiable randomness for the game via Chainlink's VRF service.
+
+**Key Functionality:**
+- **Random Number Generation**: Requests and receives verifiable random numbers from Chainlink
+- **Request Management**: Tracks the status of random number requests
+- **Secure Randomness**: Ensures fair and unpredictable outcomes for game mechanics
+
+**Implementation Details:**
+- Uses Chainlink's VRFConsumerBaseV2 and VRFCoordinatorV2Interface
+- Manages subscription-based randomness requests
+- Tracks request fulfillment status
+
+**External Contract Interactions:**
+- Called by CrypdoeBucks.sol for random numbers
+- Interacts with Chainlink's VRF Coordinator
+
+### Workshop.sol
+
+An example/demo contract that appears to be for educational purposes rather than core game functionality.
+
+**Key Functionality:**
+- **Data Structure Examples**: Shows how to implement complex data structures
+- **Contract Design Patterns**: Demonstrates various Solidity patterns
+- **Event and Error Handling**: Examples of proper event and error usage
+
+## Contract Interactions
+
+The contracts in the CryptDoeBucks ecosystem interact in the following ways:
+
+1. **Game Flow**:
+   - CrypdoeBucks contract is the main entry point for player interactions
+   - When a buck is created, the CrypdoeBucks contract mints a new NFT and assigns attributes
+   - Fees collected go to the PrizePool contract
+
+2. **Fighting Mechanics**:
+   - When a fight is initiated, CrypdoeBucks calls VRFv2Consumer to get random values
+   - FightLib is used to calculate power levels and determine outcomes
+   - Results are applied in CrypdoeBucks (doe transfers, experience gains, cooldowns)
+
+3. **Randomness System**:
+   - VRFv2Consumer requests random numbers from Chainlink
+   - When fulfilled, the random values are used for fights, breeding, and other game mechanics
+   - The request-response cycle ensures fair and unpredictable outcomes
+
+4. **Prize Distribution**:
+   - When a player ends their season, CrypdoeBucks calls PrizePool to award a prize
+   - PrizePool calculates the amount based on the buck's doe percentage of the total
+   - The buck is then burned, removing it from circulation
+
+5. **Season Management**:
+   - PrizePool keeps track of the mating season end time
+   - CrypdoeBucks checks this when players try to end their season
+   - After the season ends, remaining funds can be withdrawn by the owner
+
+## Key Game Mechanics
+
+### Buck Attributes and Genetics
+
+Each buck has a combination of fixed and dynamic attributes:
+
+- **Fixed at Creation**: 
+  - Points (base strength)
+  - Fighting Style (rock-paper-scissors mechanic)
+  - Initial Genetics (strength, speed, vitality, intelligence)
+
+- **Dynamic/Changeable**:
+  - Experience (earned through fighting)
+  - Level (increases with experience)
+  - Doe Count (changes through fighting)
+  - Genetics (can be improved through training)
+
+### Fighting System
+
+The battle system is balanced around three key elements:
+
+1. **Base Power**: Determined by the buck's points and level
+2. **Style Advantage**: Rock-paper-scissors mechanic where:
+   - Style 1 beats Style 3
+   - Style 2 beats Style 1
+   - Style 3 beats Style 2
+3. **Randomness**: Chainlink VRF ensures unpredictable outcomes
+
+Additional combat mechanics include:
+- Critical hits (chance increases with level)
+- Special abilities (unlocked at level 5)
+- Genetic bonuses (strength increases power, vitality improves defense)
+
+### Breeding Mechanics
+
+Bucks can be bred to create offspring with combined traits:
+
+1. Bucks must be level 3 or higher to breed
+2. Breeding has a cooldown period (24 hours by default)
+3. Offspring inherit genetics from both parents with some randomness
+4. New bucks start with 1 doe and must earn more through victories
+
+### Economy and Rewards
+
+The game economy revolves around:
+
+1. **Doe Accumulation**: More does = larger share of the prize pool
+2. **Risk vs. Reward**: More does also makes a buck a more attractive target
+3. **Season Strategy**: Players must decide when to end their season and claim rewards
+4. **Training Investment**: Fees paid for training and breeding go to the prize pool
+
+## Interfaces
+
+The system uses interfaces to define clear API boundaries:
+
+- **IPrizePool**: Defines the functions the CrypdoeBucks contract can call on PrizePool
+- **IVRFv2Consumer**: Defines the interface for requesting and retrieving random numbers
+
 The envisioned goal unfolds as follows: Each buck, upon its inception, is imbued with attributes randomly assigned by the Chainlink VRF (Verifiable Random Function), with the minting process financed by a player's fee in the EVM's native currency (e.g., ETH). Moving forward, my plan is to introduce a nominal operator fee. This fee is intended to cover the VRF call costs and to facilitate a modest profit margin. Such contributions will be pooled together to form the prize fund. Before the season draws to a close, buck owners are empowered to finalize their season using the endSeason function. This maneuver allows for the exchange of the buck's doe count for a corresponding slice of the prize pool, based on the total doe count, while simultaneously retiring the buck token. By way of example, consider a situation with a total of 1,000 does and a prize pool amounting to 10 ETH. Should an owner of a buck with a herd of 100 does (representing 10% of the overall doe population) decide to conclude their season, they would receive 1 ETH from the pool in exchange for retiring their buck.
 
 Bucks have the option to immediately capitalize on their does, but for those seeking greater thrills, there are does ripe for the taking. Bucks can challenge any other buck as often as they like until they secure a victory, after which they must observe a brief cooldown period to recuperate. This cooldown not only gives your buck a well-deserved rest but also curtails spam attacks and levels the playing field for players across different time zones, encouraging the ownership of multiple bucks.
@@ -16,17 +195,6 @@ During an attack, the aggressor buck has an inherent advantage, safeguarding its
 - **Chainlink VRF**: This call infuses the game with a layer of provable randomness, ensuring that battles remain unpredictable and thrilling. Even a buck with lesser power can emerge victorious against a stronger adversary if the style matchup and randomness swing in its favor.
   
 This intricate blend of strategy, chance, and valor makes for a dynamic and engaging gameplay experience, where every buck, regardless of its initial strength, stands a chance to rise to glory.
-
-I think this gameplay element adds a fascinating layer of strategy and risk assessment. By accumulating does, a buck enhances its potential share of the prize pool, yet simultaneously becomes a more enticing target for rivals. This dynamic forces players to carefully consider the optimal moment to conclude their season, balancing the desire for a larger prize against the escalating risk of being challenged.
-
-To further enrich this strategic depth, introducing an experience points (XP) system could provide an additional dimension. Here's how it could work:
-
-- **Experience Points (XP)**: Bucks earn XP for each successful fight, with the amount potentially varying based on the strength of the opponent or the odds overcome during the battle.
-- **Leveling Up**: Accumulating a certain amount of XP would allow a buck to "level up," enhancing its inherent power or unlocking new abilities. This progression system would encourage players to engage in battles to strengthen their bucks.
-- **Strategic Decisions**: With the introduction of XP and leveling, players must make even more nuanced decisions. They must weigh the benefits of potentially increasing their buck's power against the risks of attracting attention from formidable challengers.
-- **Skill Development**: Beyond mere strength enhancements, leveling up could allow bucks to develop unique skills or improve their fighting styles, offering strategic advantages in battles.
-
-By integrating an XP system, the game would not only incentivize active participation in battles but also introduce a long-term development aspect for each buck, making the gameplay more engaging and the strategic decisions more impactful.
 
 ### Key Features
 
