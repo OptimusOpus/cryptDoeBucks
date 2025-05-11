@@ -18,29 +18,21 @@ function getWallet() {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: /*process.env.SOLC_VERSION ||*/ '0.8.20',
-    settings: {
-      viaIR:
-        (process.env.SOLIDITY_VIA_IR &&
-          'true' === process.env.SOLIDITY_VIA_IR.toLowerCase()) ||
-        false,
-      optimizer: {
-        enabled:
-          (process.env.SOLIDITY_OPTIMIZER &&
-            'true' === process.env.SOLIDITY_OPTIMIZER.toLowerCase()) ||
-          false,
-        runs:
-          (process.env.SOLIDITY_OPTIMIZER_RUNS &&
-            Boolean(parseInt(process.env.SOLIDITY_OPTIMIZER_RUNS)) &&
-            parseInt(process.env.SOLIDITY_OPTIMIZER_RUNS)) ||
-          200,
-      },
-      outputSelection: {
-        '*': {
-          '*': ['storageLayout'],
+    compilers: [{
+      version: '0.8.20',
+      settings: {
+        viaIR: true,
+        optimizer: {
+          enabled: true,
+          runs: 1,  // Using a very low value to optimize for contract size rather than execution gas cost
         },
-      },
-    },
+        outputSelection: {
+          '*': {
+            '*': ['storageLayout'],
+          },
+        },
+      }
+    }],
   },
   storageVault: {
     check: {
