@@ -18,7 +18,7 @@ function getWallet() {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: process.env.SOLC_VERSION || '0.8.18',
+    version: /*process.env.SOLC_VERSION ||*/ '0.8.20',
     settings: {
       viaIR:
         (process.env.SOLIDITY_VIA_IR &&

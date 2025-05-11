@@ -3,8 +3,7 @@
  * @dev A contract for managing and fighting Crypto Bucks.
  */
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
-pragma abicoder v2;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
