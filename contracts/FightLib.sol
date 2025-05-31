@@ -36,21 +36,21 @@ library FightLib {
         uint8 level,
         uint8 strength,
         uint8 intelligence
-    ) internal pure returns (uint) {
+    ) internal pure returns (uint256) {
         // Base power calculation
-        uint base = randomNumber % points ** 4;
+        uint256 base = randomNumber % points ** 4;
 
         // Add bonuses from level and genetics
-        uint levelBonus = level * 10;
-        uint strengthBonus = strength * 5;
-        uint intelligenceBonus = intelligence * 3;
+        uint256 levelBonus = level * 10;
+        uint256 strengthBonus = strength * 5;
+        uint256 intelligenceBonus = intelligence * 3;
 
         return base + levelBonus + strengthBonus + intelligenceBonus;
     }
     
     // Check for critical hit
     function isCriticalHit(uint8 level, uint256 randomValue) internal pure returns (bool) {
-        uint criticalChance = level * 5; // 5% chance per level
+        uint256 criticalChance = level * 5; // 5% chance per level
         return randomValue % 100 < criticalChance;
     }
     

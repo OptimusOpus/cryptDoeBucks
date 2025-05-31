@@ -22,7 +22,7 @@ contract FightLibTest {
         uint8 level,
         uint8 strength,
         uint8 intelligence
-    ) public pure returns (uint) {
+    ) public pure returns (uint256) {
         return FightLib.powerLevel(points, randomNumber, level, strength, intelligence);
     }
     

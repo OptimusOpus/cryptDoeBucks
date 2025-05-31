@@ -30,7 +30,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
     }
 
     // Token id to owner
-    mapping(uint => address) public buckToOwner;
+    mapping(uint256 => address) public buckToOwner;
     // Mapping for fight styles
     mapping(uint32 => uint32) winMap;
 
@@ -86,26 +86,26 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
     uint32 public breedingCooldown = 86400; // 24 hours
 
     // Mapping for breeding cooldowns
-    mapping(uint => uint32) public breedingCooldowns;
+    mapping(uint256 => uint32) public breedingCooldowns;
 
-    event FightInitiated(uint attacker, uint defender, uint256 randomRequestId);
+    event FightInitiated(uint256 attacker, uint256 defender, uint256 randomRequestId);
     event FightConcluded(
-        uint defender,
-        uint attacker,
+        uint256 defender,
+        uint256 attacker,
         uint32 doesMoved,
-        uint attackPower,
-        uint defendPower,
+        uint256 attackPower,
+        uint256 defendPower,
         bool wasCriticalHit
     );
-    event NewBuck(address to, uint id, uint32 points, uint32 fightingStyle, uint32 does, Genetics genetics);
-    event BuckLevelUp(uint buckId, uint8 newLevel);
-    event BuckTrained(uint buckId, Trait trait, uint8 newValue);
-    event BuckBred(uint parent1Id, uint parent2Id, uint newBuckId);
-    event SpecialAbilityUnlocked(uint buckId);
-    event Received(address sender, uint amount);
-    event EndSeason(uint buckId, uint256 prizeAmount);
+    event NewBuck(address to, uint256 id, uint32 points, uint32 fightingStyle, uint32 does, Genetics genetics);
+    event BuckLevelUp(uint256 buckId, uint8 newLevel);
+    event BuckTrained(uint256 buckId, Trait trait, uint8 newValue);
+    event BuckBred(uint256 parent1Id, uint256 parent2Id, uint256 newBuckId);
+    event SpecialAbilityUnlocked(uint256 buckId);
+    event Received(address sender, uint256 amount);
+    event EndSeason(uint256 buckId, uint256 prizeAmount);
 
-    modifier onlyOwnerOf(uint _id) {
+    modifier onlyOwnerOf(uint256 _id) {
         require(msg.sender == buckToOwner[_id], "Must be the buck owner");
         _;
     }
@@ -120,7 +120,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         _;
     }
 
-    modifier notBreedingCooldown(uint _buckId) {
+    modifier notBreedingCooldown(uint256 _buckId) {
         require(block.timestamp > breedingCooldowns[_buckId], "Buck is on breeding cooldown");
         _;
     }
@@ -182,7 +182,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         uint32 _points,
         uint32 _fightingStyle,
         uint32 _does
-    ) public onlyOwner whenNotPaused returns (uint) {
+    ) public onlyOwner whenNotPaused returns (uint256) {
         // Create random genetics
         uint256 randomSeed = uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, owner)));
         Genetics memory genetics = Genetics(
@@ -192,7 +192,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
             uint8((randomSeed >> 24) % 10) + 1
         );
 
-        uint id = bucks.length; // Use the current length as the new ID
+        uint256 id = bucks.length; // Use the current length as the new ID
         bucks.push(
             Buck(
                 _points,
@@ -258,7 +258,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         uint32 newFightingStyle = randomSeed % 3 == 0 ? parent1.fightingStyle : parent2.fightingStyle;
         uint32 newDoes = 1; // Start with 1 doe
 
-        uint newBuckId = createBuck(msg.sender, newPoints, newFightingStyle, newDoes);
+        uint256 newBuckId = createBuck(msg.sender, newPoints, newFightingStyle, newDoes);
 
         // Update the genetics of the new buck
         bucks[newBuckId].genetics = newGenetics;
@@ -330,7 +330,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
     }
 
     // Cooldown after fight
-    function _triggerCooldown(uint id) internal {
+    function _triggerCooldown(uint256 id) internal {
         // Apply speed genetics to reduce cooldown time
         uint32 reducedCooldown = cooldownTime - ((cooldownTime * bucks[id].genetics.speed) / 100);
         bucks[id].readyTime = uint32(block.timestamp + reducedCooldown);
@@ -359,7 +359,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         uint256 randomNumber,
         uint8 level,
         Genetics memory genetics
-    ) private pure returns (uint) {
+    ) private pure returns (uint256) {
         return FightLib.powerLevel(
             points,
             randomNumber,
@@ -376,7 +376,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         return winner == 1; // Return true if attacker has advantage
     }
 
-    function moveDoes(uint fromId, uint toId) internal {
+    function moveDoes(uint256 fromId, uint256 toId) internal {
         Buck storage fromBuck = bucks[fromId];
         Buck storage toBuck = bucks[toId];
         uint32 doesMoving = fromBuck.does;
@@ -403,7 +403,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         Buck storage defendingBuck = bucks[defenderId];
 
         // Calculate power levels for attacker and defender
-        (uint attackPower, uint defendPower, bool wasCriticalHit) = calculatePowerLevels(
+        (uint256 attackPower, uint256 defendPower, bool wasCriticalHit) = calculatePowerLevels(
             attackingBuck,
             defendingBuck,
             randomWords
@@ -471,7 +471,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         Buck memory attackingBuck,
         Buck memory defendingBuck,
         uint256[] memory randomWords
-    ) private pure returns (uint attackPower, uint defendPower, bool wasCriticalHit) {
+    ) private pure returns (uint256 attackPower, uint256 defendPower, bool wasCriticalHit) {
         require(randomWords.length >= 2, "Not enough random words");
         
         // Apply style bonuses to buck points
@@ -524,8 +524,8 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
     function applyFightOutcome(
         uint256 attackerId,
         uint256 defenderId,
-        uint attackPower,
-        uint defendPower,
+        uint256 attackPower,
+        uint256 defendPower,
         bool wasCriticalHit
     ) private {
         // Determine the fight winner based on power levels
@@ -553,8 +553,8 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         uint256 loserId,
         uint32 doesTransferred,
         bool applyCooldown,
-        uint winnerPower,
-        uint loserPower,
+        uint256 winnerPower,
+        uint256 loserPower,
         bool wasCriticalHit
     ) private {
         if (doesTransferred > 0) {

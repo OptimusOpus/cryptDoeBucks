@@ -43,7 +43,7 @@
     "format:ts": "prettier '**/{*,''}.ts' --write; eslint '**/{*,''}.ts' --fix;",
     "format:sol": "prettier '**/*.sol' --write; solhint 'contracts/*.sol' --fix;",
     "lint": "prettier '**/{*,''}.{json,js,ts,sol}' --check; solhint 'contracts/*.sol'; eslint '**/{*,''}.{json,js,ts}';",
-    "hook:pre-push": "tsc --noEmit && prettier '**/{*,''}.{json,js,ts,sol}' --check && eslint '**/{*,''}.{json,js,ts}'"
+    "hook:pre-push": "tsc --noEmit && prettier '**/{*,''}.{json,js,ts}' --check && eslint '**/{*,''}.{json,js,ts}'"
   },
   "husky": {
     "hooks": {
@@ -63,7 +63,6 @@
     "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.4",
-    "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@openzeppelin/contracts": "^4.9.5",
     "@remix-project/remixd": "^0.6.19",
     "@typechain/ethers-v6": "^0.5.1",

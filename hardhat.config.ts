@@ -18,21 +18,23 @@ function getWallet() {
 
 const config: HardhatUserConfig = {
   solidity: {
-    compilers: [{
-      version: '0.8.20',
-      settings: {
-        viaIR: true,
-        optimizer: {
-          enabled: true,
-          runs: 1,  // Using a very low value to optimize for contract size rather than execution gas cost
-        },
-        outputSelection: {
-          '*': {
-            '*': ['storageLayout'],
+    compilers: [
+      {
+        version: '0.8.20',
+        settings: {
+          viaIR: true,
+          optimizer: {
+            enabled: true,
+            runs: 1, // Using a very low value to optimize for contract size rather than execution gas cost
+          },
+          outputSelection: {
+            '*': {
+              '*': ['storageLayout'],
+            },
           },
         },
-      }
-    }],
+      },
+    ],
   },
   storageVault: {
     check: {
@@ -54,14 +56,10 @@ const config: HardhatUserConfig = {
     strict: true,
   },
   gasReporter: {
-    enabled:
-      (process.env.REPORT_GAS &&
-        'true' === process.env.REPORT_GAS.toLowerCase()) ||
-      false,
+    enabled: (process.env.REPORT_GAS && 'true' === process.env.REPORT_GAS.toLowerCase()) || false,
     coinmarketcap: process.env.COINMARKETCAP_API_KEY || '',
     gasPriceApi:
-      process.env.GAS_PRICE_API ||
-      'https://api.etherscan.io/api?module=proxy&action=eth_gasPrice',
+      process.env.GAS_PRICE_API || 'https://api.etherscan.io/api?module=proxy&action=eth_gasPrice',
     token: 'ETH',
     currency: 'USD',
   },
