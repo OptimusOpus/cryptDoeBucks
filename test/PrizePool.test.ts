@@ -447,9 +447,8 @@ describe('PrizePool', () => {
   describe('Integration with CrypdoeBucks', () => {
     beforeEach(async () => {
       // Deploy full integrated fixture to get CrypdoeBucks + PrizePool wired together
-      const { prizePool: newPrizePool, crypdoeBucks: newCrypdoeBucks } = await loadFixture(
-        deployIntegratedFixture,
-      );
+      const { prizePool: newPrizePool, crypdoeBucks: newCrypdoeBucks } =
+        await loadFixture(deployIntegratedFixture);
 
       prizePool = newPrizePool;
       crypdoeBucks = newCrypdoeBucks;
