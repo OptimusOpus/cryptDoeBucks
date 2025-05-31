@@ -13,7 +13,6 @@ import {
 import { deployRandomNumberConsumerFixture } from './fixtures/RandomNumberConsumer';
 import { getEventData } from './utils';
 
-const scalefactor = 10n ** 18n;
 let CrypdoeBucksFactory: CrypdoeBucks__factory;
 let crypdoeBucks: CrypdoeBucks;
 // eslint-disable-next-line no-unused-vars
@@ -63,7 +62,6 @@ let randomNumberConsumerV2Address: string;
 let crypdoeBucksAddress: string;
 let randomNumberConsumerV2: VRFv2Consumer;
 let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock;
-const prizePool = ethers.parseEther('1'); // Example prize pool setup
 
 describe('CrypdoeBucks', () => {
   before(async () => {
@@ -79,28 +77,28 @@ describe('CrypdoeBucks', () => {
     randomNumberConsumerV2Address = await randomNumberConsumerV2.getAddress();
 
     const matingSeasonEnd = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days from now in seconds
-    
+
     // Deploy PrizePool first
     const PrizePoolFactory = await ethers.getContractFactory('PrizePool');
     const initialPrizePoolAmount = ethers.parseEther('1.0');
     const trainingCost = ethers.parseEther('0.01');
     const breedingCost = ethers.parseEther('0.05');
-    
+
     const prizePoolContract = await PrizePoolFactory.deploy(
       matingSeasonEnd,
       initialPrizePoolAmount,
       trainingCost,
       breedingCost
     );
-    
+
     const prizePoolAddress = await prizePoolContract.getAddress();
-    
+
     // Send ETH to the PrizePool contract to ensure it has enough funds
     await deployer.sendTransaction({
       to: prizePoolAddress,
-      value: ethers.parseEther('3.0') // Send 3 ETH to the contract
+      value: ethers.parseEther('3.0'), // Send 3 ETH to the contract
     });
-    
+
     // Now deploy CrypdoeBucks with the correct parameters
     CrypdoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks');
     crypdoeBucks = await CrypdoeBucksFactory.deploy(
@@ -109,7 +107,7 @@ describe('CrypdoeBucks', () => {
     );
 
     crypdoeBucksAddress = await crypdoeBucks.getAddress();
-    
+
     // Set the buck contract address in the PrizePool contract
     await prizePoolContract.setBuckContract(crypdoeBucksAddress);
 
@@ -303,13 +301,14 @@ describe('CrypdoeBucks', () => {
     it('Should transfer correct prize pool percentage to buck owner', async function () {
       // Track the prize pool balance before the prize is awarded
       const initialPrizePool = await crypdoeBucks.getPrizePoolValue();
-      
+
       // Store the actual initial prize pool value for calculations
       const actualInitialPrizePool = BigInt(initialPrizePool.toString());
-      
+
       // Calculate the expected prize amount based on the actual prize pool
       // buck1 has 69 does out of 100 total does (69%)
-      const expectedPrizeAmount = (actualInitialPrizePool * BigInt(buck1.does)) / maxDoeCount;
+      const expectedPrizeAmount =
+        (actualInitialPrizePool * BigInt(buck1.does)) / maxDoeCount;
 
       // User1 Gives approval to the contract to burn their buck
       await crypdoeBucks.connect(user1).approve(crypdoeBucksAddress, 0);
@@ -325,16 +324,18 @@ describe('CrypdoeBucks', () => {
 
       // Check the buck ID is correct in the event
       expect(event?.args[0]).to.equal(0);
-      
+
       // Check the prize amount in the event matches our expected value
-      expect(event?.args[1]).to.equal(690000000000000000n);
+      expect(event?.args[1]).to.equal(expectedPrizeAmount);
 
       // Track prize pool balance after the prize is awarded
       const finalPrizePool = await crypdoeBucks.getPrizePoolValue();
       const actualFinalPrizePool = BigInt(finalPrizePool.toString());
 
       // Check that the prize amount was correctly deducted from the prize pool
-      expect(actualInitialPrizePool - actualFinalPrizePool).to.equal(690000000000000000n);
+      expect(actualInitialPrizePool - actualFinalPrizePool).to.equal(
+        expectedPrizeAmount
+      );
 
       // Check if the buck has been burned by querying its owner, which should revert
       await expect(crypdoeBucks.ownerOf(0)).to.be.reverted;
