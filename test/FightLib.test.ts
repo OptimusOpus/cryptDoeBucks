@@ -34,10 +34,10 @@ describe('FightLib Unit Tests', function () {
       expect(testValues).to.equal(0); // Draw
     });
 
-    it('Should determine that style 2 beats style 3', async function () {
+    it('Should return 2 when attacker loses to defender', async function () {
       const { fightLibTest } = await loadFixture(deployFightLibTestFixture);
       const testValues = await fightLibTest.getWinner(3, 1);
-      expect(testValues).to.equal(2); // Style 1 wins against style 3
+      expect(testValues).to.equal(2); // Defender wins (return 2)
     });
   });
 
@@ -93,12 +93,11 @@ describe('FightLib Unit Tests', function () {
       // Test another set of values
       const power2 = await fightLibTest.powerLevel(5, 54321, 10, 10, 10);
 
-      // Base calculation: 54321 % 5^4 = 54321 % 625 = 321
+      // Base calculation: 54321 % 5^4 = 54321 % 625 = 571
       // Level bonus: 10 * 10 = 100
       // Strength bonus: 10 * 5 = 50
       // Intelligence bonus: 10 * 3 = 30
-      // Total: 321 + 100 + 50 + 30 = 501
-      // Actual calculation may differ due to modulo specifics
+      // Total: 571 + 100 + 50 + 30 = 751
 
       expect(power2).to.equal(751);
     });

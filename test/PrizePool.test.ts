@@ -371,6 +371,9 @@ describe('PrizePool', () => {
       prizePool = newPrizePool;
       prizePoolAddress = await prizePool.getAddress();
       [deployer, user1, user2] = await ethers.getSigners();
+      deployerAddress = await deployer.getAddress();
+      user1Address = await user1.getAddress();
+      user2Address = await user2.getAddress();
     });
 
     it('Should allow owner to pause and unpause', async () => {
