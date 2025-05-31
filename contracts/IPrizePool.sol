@@ -9,9 +9,10 @@ interface IPrizePool {
     // Functions
     function addTrainingCost() external payable;
     function addBreedingCost() external payable;
-    function awardPrize(address recipient, uint256 buckId, uint256 doesCount) external;
+    function awardPrize(address recipient, uint256 buckId, uint256 doesCount) external returns (uint256);
     function updateTotalDoeCount(uint256 _totalDoeCount) external;
     function getTrainingCost() external view returns (uint256);
     function getBreedingCost() external view returns (uint256);
     function getMatingSeasonEnd() external view returns (uint256);
+    function prizePool() external view returns (uint256);
 }

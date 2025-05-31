@@ -21,6 +21,13 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
     using FightLib for uint32;
     IVRFv2Consumer immutable VRF_CONTRACT;
     IPrizePool public prizePool;
+    
+    // Helper function to get the actual prize pool value from the PrizePool contract
+    function getPrizePoolValue() public view returns (uint256) {
+        // Access the prizePool variable from the PrizePool contract
+        IPrizePool prizePoolContract = prizePool;
+        return prizePoolContract.prizePool();
+    }
 
     // Token id to owner
     mapping(uint => address) public buckToOwner;
@@ -311,7 +318,10 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         uint256 prizeAmount = 690000000000000000; // 0.69 ETH or 69% of 1 ETH
         
         // Award prize to buck owner
-        prizePool.awardPrize(buckToOwner[buckId], buckId, buck.does);
+        uint256 awardedAmount = prizePool.awardPrize(buckToOwner[buckId], buckId, buck.does);
+        
+        // Verify the prize was awarded correctly
+        require(awardedAmount == prizeAmount, "Prize amount mismatch");
 
         // Burn buck
         _burnBuck(buckId);

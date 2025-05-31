@@ -302,7 +302,7 @@ describe('CrypdoeBucks', () => {
 
     it('Should transfer correct prize pool percentage to buck owner', async function () {
       // Track the prize pool balance before the prize is awarded
-      const initialPrizePool = await crypdoeBucks.prizePool();
+      const initialPrizePool = await crypdoeBucks.getPrizePoolValue();
       
       // Store the actual initial prize pool value for calculations
       const actualInitialPrizePool = BigInt(initialPrizePool.toString());
@@ -330,7 +330,7 @@ describe('CrypdoeBucks', () => {
       expect(event?.args[1]).to.equal(690000000000000000n);
 
       // Track prize pool balance after the prize is awarded
-      const finalPrizePool = await crypdoeBucks.prizePool();
+      const finalPrizePool = await crypdoeBucks.getPrizePoolValue();
       const actualFinalPrizePool = BigInt(finalPrizePool.toString());
 
       // Check that the prize amount was correctly deducted from the prize pool

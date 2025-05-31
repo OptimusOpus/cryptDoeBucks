@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
  * This contract abstracts the prize pool logic from the main CryptDoeBucks contract.
  */
 contract PrizePool is Ownable, ReentrancyGuard, Pausable {
+
     // Amount of funds in the prize pool
     uint256 public prizePool;
     
@@ -142,10 +143,13 @@ contract PrizePool is Ownable, ReentrancyGuard, Pausable {
         // Update the prize pool
         prizePool = prizePool - prizeAmount;
         
+        // Check if contract has enough ETH
         require(address(this).balance >= prizeAmount, "Not enough funds in contract");
         
-        // Transfer the prize to the recipient
-        payable(recipient).transfer(prizeAmount);
+        // Transfer the prize to the recipient using call instead of transfer
+        // This is safer and handles more edge cases
+        (bool success, ) = payable(recipient).call{value: prizeAmount}("");
+        require(success, "Transfer failed");
         
         emit PrizeAwarded(recipient, prizeAmount, buckId, doesCount, totalDoeCount);
         
