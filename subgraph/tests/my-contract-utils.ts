@@ -1,11 +1,7 @@
-import { newMockEvent } from "matchstick-as"
-import { ethereum } from "@graphprotocol/graph-ts"
-import { DummyEvent } from "../generated/MyContract/MyContract"
+import { ethereum } from '@graphprotocol/graph-ts';
+import { newMockEvent } from 'matchstick-as';
 
-export function createDummyEventEvent(): DummyEvent {
-  let dummyEventEvent = changetype<DummyEvent>(newMockEvent())
-
-  dummyEventEvent.parameters = new Array()
-
-  return dummyEventEvent
+// Simple mock event creator for testing
+export function createDummyEvent(): ethereum.Event {
+  return newMockEvent();
 }

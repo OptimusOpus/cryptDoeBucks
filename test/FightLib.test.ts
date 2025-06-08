@@ -178,7 +178,7 @@ describe('Game Scenarios - Threshold Checks', function () {
     expect(await fightLibTest.isCriticalHit(0, 0)).to.be.false;
   });
 
-   it('Critical Hit: Max chance (level 20, 100% chance, random 99)', async function () {
+  it('Critical Hit: Max chance (level 20, 100% chance, random 99)', async function () {
     const { fightLibTest } = await loadFixture(deployFightLibTestFixture);
     // Level 20 * 5 = 100. randomValue % 100 < 100. 99 < 100 is true.
     expect(await fightLibTest.isCriticalHit(20, 99)).to.be.true;
@@ -189,7 +189,6 @@ describe('Game Scenarios - Threshold Checks', function () {
     // Level 20 * 5 = 100. randomValue % 100 < 100. 0 < 100 is true.
     expect(await fightLibTest.isCriticalHit(20, 0)).to.be.true;
   });
-
 
   // Special Ability Thresholds
   it('Special Ability: Just below threshold (has special, random 29)', async function () {
@@ -242,7 +241,13 @@ describe('Game Scenarios - Power Calculation Edge Cases', function () {
     // Intelligence Bonus: intelligence * 3 = 1 * 3 = 3
     // Total: 0 + 10 + 5 + 3 = 18
     const expectedPower = 18;
-    const actualPower = await fightLibTest.powerLevel(pointsValue, randomness, level, strength, intelligence);
+    const actualPower = await fightLibTest.powerLevel(
+      pointsValue,
+      randomness,
+      level,
+      strength,
+      intelligence,
+    );
     expect(actualPower).to.equal(expectedPower);
   });
 
@@ -263,11 +268,17 @@ describe('Game Scenarios - Power Calculation Edge Cases', function () {
     // Intelligence Bonus: intelligence * 3 = 20 * 3 = 60
     // Total: 9999 + 200 + 100 + 60 = 10359
     const expectedPower = 10359;
-    const actualPower = await fightLibTest.powerLevel(pointsValue, randomness, level, strength, intelligence);
+    const actualPower = await fightLibTest.powerLevel(
+      pointsValue,
+      randomness,
+      level,
+      strength,
+      intelligence,
+    );
     expect(actualPower).to.equal(expectedPower);
   });
 
-   it('Scenario: Power Calculation - Zero Stats (if permissible by contract)', async function () {
+  it('Scenario: Power Calculation - Zero Stats (if permissible by contract)', async function () {
     const { fightLibTest } = await loadFixture(deployFightLibTestFixture);
 
     const pointsValue = 1; // Using points = 1 for this test case
@@ -285,7 +296,13 @@ describe('Game Scenarios - Power Calculation Edge Cases', function () {
     // Intelligence Bonus: intelligence * 3 = 0 * 3 = 0
     // Total: 0 + 10 + 0 + 0 = 10
     const expectedPower = 10;
-    const actualPower = await fightLibTest.powerLevel(pointsValue, randomness, level, strength, intelligence);
+    const actualPower = await fightLibTest.powerLevel(
+      pointsValue,
+      randomness,
+      level,
+      strength,
+      intelligence,
+    );
     expect(actualPower).to.equal(expectedPower);
   });
 });
@@ -312,8 +329,20 @@ describe('Game Scenarios - Style Draw', function () {
     const defenderIntelligence = 8;
     const pointsValue = 10; // Define a consistent points value
 
-    const attackerPower = await fightLibTest.powerLevel(pointsValue, attackerRandomness, attackerLevel, attackerStrength, attackerIntelligence);
-    const defenderPower = await fightLibTest.powerLevel(pointsValue, defenderRandomness, defenderLevel, defenderStrength, defenderIntelligence);
+    const attackerPower = await fightLibTest.powerLevel(
+      pointsValue,
+      attackerRandomness,
+      attackerLevel,
+      attackerStrength,
+      attackerIntelligence,
+    );
+    const defenderPower = await fightLibTest.powerLevel(
+      pointsValue,
+      defenderRandomness,
+      defenderLevel,
+      defenderStrength,
+      defenderIntelligence,
+    );
 
     const styleWinner = await fightLibTest.getWinner(style, style);
     expect(styleWinner).to.equal(0); // Draw in styles
@@ -323,7 +352,7 @@ describe('Game Scenarios - Style Draw', function () {
 
     expect(attackerPower).to.be.greaterThan(defenderPower);
     // Assuming direct power comparison when styles draw and no other bonuses apply
-    const finalWinner = attackerPower > defenderPower ? 1 : (defenderPower > attackerPower ? 2 : 0);
+    const finalWinner = attackerPower > defenderPower ? 1 : defenderPower > attackerPower ? 2 : 0;
     expect(finalWinner).to.equal(1); // Attacker wins by power
   });
 
@@ -342,8 +371,20 @@ describe('Game Scenarios - Style Draw', function () {
     const defenderIntelligence = 10;
     const pointsValue = 10; // Define a consistent points value
 
-    const attackerPower = await fightLibTest.powerLevel(pointsValue, attackerRandomness, attackerLevel, attackerStrength, attackerIntelligence);
-    const defenderPower = await fightLibTest.powerLevel(pointsValue, defenderRandomness, defenderLevel, defenderStrength, defenderIntelligence);
+    const attackerPower = await fightLibTest.powerLevel(
+      pointsValue,
+      attackerRandomness,
+      attackerLevel,
+      attackerStrength,
+      attackerIntelligence,
+    );
+    const defenderPower = await fightLibTest.powerLevel(
+      pointsValue,
+      defenderRandomness,
+      defenderLevel,
+      defenderStrength,
+      defenderIntelligence,
+    );
 
     const styleWinner = await fightLibTest.getWinner(style, style);
     expect(styleWinner).to.equal(0); // Draw
@@ -352,7 +393,7 @@ describe('Game Scenarios - Style Draw', function () {
     expect(styleBonus).to.equal(0); // No bonus
 
     expect(defenderPower).to.be.greaterThan(attackerPower);
-    const finalWinner = attackerPower > defenderPower ? 1 : (defenderPower > attackerPower ? 2 : 0);
+    const finalWinner = attackerPower > defenderPower ? 1 : defenderPower > attackerPower ? 2 : 0;
     expect(finalWinner).to.equal(2); // Defender wins by power
   });
 });
@@ -370,7 +411,10 @@ describe('Game Scenarios - Special Ability', function () {
     const attackerHasSpecial = true;
     const specificRandomValueForActivation = 29; // Activates: 29 < 30
 
-    const activates = await fightLibTest.specialAbilityActivates(attackerHasSpecial, specificRandomValueForActivation);
+    const activates = await fightLibTest.specialAbilityActivates(
+      attackerHasSpecial,
+      specificRandomValueForActivation,
+    );
     expect(activates).to.be.true;
 
     // Define arbitrary power levels
@@ -392,7 +436,10 @@ describe('Game Scenarios - Special Ability', function () {
     const attackerHasSpecial = true;
     const specificRandomValueNoActivation = 30; // Fails: 30 is not < 30
 
-    const activates = await fightLibTest.specialAbilityActivates(attackerHasSpecial, specificRandomValueNoActivation);
+    const activates = await fightLibTest.specialAbilityActivates(
+      attackerHasSpecial,
+      specificRandomValueNoActivation,
+    );
     expect(activates).to.be.false;
 
     const attackerPower = 100;
@@ -412,7 +459,10 @@ describe('Game Scenarios - Special Ability', function () {
     const attackerHasSpecial = false; // Does not have special ability
     const specificRandomValueIrrelevant = 10; // Low value, but should not activate
 
-    const activates = await fightLibTest.specialAbilityActivates(attackerHasSpecial, specificRandomValueIrrelevant);
+    const activates = await fightLibTest.specialAbilityActivates(
+      attackerHasSpecial,
+      specificRandomValueIrrelevant,
+    );
     expect(activates).to.be.false; // Does not activate because hasSpecial is false
 
     const attackerPower = 100;
@@ -508,14 +558,14 @@ describe('Game Scenarios - Defender Wins', function () {
       attackerRandomness,
       attackerLevel,
       attackerStrength,
-      attackerIntelligence
+      attackerIntelligence,
     );
     const defenderPower = await fightLibTest.powerLevel(
       pointsValue,
       defenderRandomness,
       defenderLevel,
       defenderStrength,
-      defenderIntelligence
+      defenderIntelligence,
     );
 
     const styleWinner = await fightLibTest.getWinner(attackerStyle, defenderStyle);
@@ -528,7 +578,7 @@ describe('Game Scenarios - Defender Wins', function () {
     expect(defenderPower).to.be.greaterThan(attackerPower + styleBonusToAttacker);
 
     // Assuming a simple combat model
-    const finalWinner = (attackerPower + styleBonusToAttacker) > defenderPower ? 1 : 2;
+    const finalWinner = attackerPower + styleBonusToAttacker > defenderPower ? 1 : 2;
     expect(finalWinner).to.equal(2); // Defender wins
   });
 });
@@ -567,14 +617,14 @@ describe('Game Scenarios - Attacker Wins', function () {
       attackerRandomness,
       attackerLevel,
       attackerStrength,
-      attackerIntelligence
+      attackerIntelligence,
     );
     const defenderPower = await fightLibTest.powerLevel(
       pointsValue,
       defenderRandomness,
       defenderLevel,
       defenderStrength,
-      defenderIntelligence
+      defenderIntelligence,
     );
 
     // Check style advantage
@@ -591,7 +641,7 @@ describe('Game Scenarios - Attacker Wins', function () {
     expect(attackerPower + styleBonus).to.be.greaterThan(defenderPower);
 
     // Assuming a simple combat model where higher power + bonus wins
-    const finalWinner = (attackerPower + styleBonus) > defenderPower ? 1 : 2;
+    const finalWinner = attackerPower + styleBonus > defenderPower ? 1 : 2;
     expect(finalWinner).to.equal(1); // Attacker wins
   });
 });

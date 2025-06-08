@@ -49,14 +49,14 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged",
+      "pre-commit": "lint-staged && hardhat compile && hardhat test",
       "pre-push": "yarn run hook:pre-push"
     }
   },
   "lint-staged": {
     "*.ts": [
-      "eslint --fix",
-      "prettier --write"
+      "prettier --write",
+      "eslint --fix"
     ],
     "*.sol": [
       "solhint --fix",
@@ -64,9 +64,6 @@
     ],
     "*.{json,js,md}": [
       "prettier --write"
-    ],
-    "*.{ts,sol}": [
-      "hardhat compile && hardhat test --no-compile"
     ]
   },
   "engines": {
