@@ -1,0 +1,26 @@
+specVersion: 1.3.0
+indexerHints:
+  prune: auto
+schema:
+  file: schema.graphql # Normalized path
+dataSources:
+  - kind: ethereum
+    name: MyContract
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: MyContract
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: # Updated
+        - Transaction
+      abis:
+        - name: MyContract
+          file: ./abis/MyContract.json
+      eventHandlers: # Updated
+        - event: DummyEvent()
+          handler: handleNewTransaction
+      file: ./src/my-contract.ts

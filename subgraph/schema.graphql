@@ -1,0 +1,6 @@
+type Transaction @entity {
+  id: ID!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  gasPrice: BigInt
+}
