@@ -8,7 +8,7 @@ async function main() {
 
   if (network.name === 'hardhat') {
     console.log('Deploying VRFCoordinatorV2Mock for local network...');
-    const BASE_FEE = ethers.parseUnits("0.25", "ether"); // 0.25 LINK (mock value)
+    const BASE_FEE = ethers.parseUnits('0.25', 'ether'); // 0.25 LINK (mock value)
     const GAS_PRICE_LINK = 1e9; // 1 Gwei LINK (mock value)
     const vrfCoordinatorV2MockFactory = await ethers.getContractFactory('VRFCoordinatorV2Mock');
     const vrfCoordinatorV2Mock = await vrfCoordinatorV2MockFactory.deploy(BASE_FEE, GAS_PRICE_LINK);
@@ -24,36 +24,41 @@ async function main() {
     let foundSubId;
     if (receipt && receipt.logs) {
       for (const logEntry of receipt.logs) {
-          try {
-              // Ensure vrfCoordinatorV2Mock has its interface loaded for parsing
-              const parsedLog = vrfCoordinatorV2Mock.interface.parseLog(logEntry);
-              if (parsedLog && parsedLog.name === "SubscriptionCreated") {
-                  foundSubId = parsedLog.args.subId;
-                  break;
-              }
-          } catch (e) {
-              // Log if parsing fails for a specific log, but continue checking others
-              // console.debug(`Failed to parse a log entry: ${e}`);
+        try {
+          // Ensure vrfCoordinatorV2Mock has its interface loaded for parsing
+          const parsedLog = vrfCoordinatorV2Mock.interface.parseLog(logEntry);
+          if (parsedLog && parsedLog.name === 'SubscriptionCreated') {
+            foundSubId = parsedLog.args.subId;
+            break;
           }
+        } catch (e) {
+          // Log if parsing fails for a specific log, but continue checking others
+          // console.debug(`Failed to parse a log entry: ${e}`);
+        }
       }
     }
 
     if (foundSubId === undefined) {
-        console.warn("Could not find SubscriptionCreated event to parse subId. Using mock value 1n. TODO: Investigate event parsing if this occurs.");
-        activeSubscriptionId = 1n; // Fallback mock value
+      console.warn(
+        'Could not find SubscriptionCreated event to parse subId. Using mock value 1n. TODO: Investigate event parsing if this occurs.',
+      );
+      activeSubscriptionId = 1n; // Fallback mock value
     } else {
-         activeSubscriptionId = foundSubId;
+      activeSubscriptionId = foundSubId;
     }
     console.log('Subscription created with ID:', activeSubscriptionId.toString());
 
     // Fund the subscription
-    const fundAmount = ethers.parseUnits("100", "ether"); // 100 LINK (mock value)
+    const fundAmount = ethers.parseUnits('100', 'ether'); // 100 LINK (mock value)
     await vrfCoordinatorV2Mock.fundSubscription(activeSubscriptionId, fundAmount);
     console.log(`Subscription ${activeSubscriptionId.toString()} funded with 100 LINK (mock)`);
   } else {
     // For non-hardhat networks, use existing example mock values or expect them from .env
     activeSubscriptionId = BigInt(1); // Default mock value from existing script
-    console.log('Using default mockSubscriptionId for non-hardhat network:', activeSubscriptionId.toString());
+    console.log(
+      'Using default mockSubscriptionId for non-hardhat network:',
+      activeSubscriptionId.toString(),
+    );
   }
 
   // First, deploy the FightLib library
@@ -69,15 +74,17 @@ async function main() {
   const vrfFactory = await ethers.getContractFactory('VRFv2Consumer');
 
   // Use deployed VRFCoordinatorV2Mock address if on hardhat, otherwise use the existing placeholder/mock.
-  const coordinatorToUse = vrfCoordinatorV2MockAddress || '0x0000000000000000000000000000000000000001';
+  const coordinatorToUse =
+    vrfCoordinatorV2MockAddress || '0x0000000000000000000000000000000000000001';
 
   // Use a common keyHash for hardhat, or a placeholder for others.
-  const keyHashToUse = network.name === 'hardhat'
+  const keyHashToUse =
+    network.name === 'hardhat'
       ? '0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15' // Common keyHash for hardhat node
       : '0x0000000000000000000000000000000000000000000000000000000000000001'; // Existing placeholder
 
-  // Pass activeSubscriptionId, coordinatorToUse, keyHashToUse
-  const vrfConsumer = await vrfFactory.deploy(activeSubscriptionId, coordinatorToUse, keyHashToUse);
+  // Pass activeSubscriptionId, keyHashToUse, coordinatorToUse (matching constructor order)
+  const vrfConsumer = await vrfFactory.deploy(activeSubscriptionId, keyHashToUse, coordinatorToUse);
   await vrfConsumer.waitForDeployment();
   const vrfAddress = await vrfConsumer.getAddress();
   console.log('VRF Consumer deployed to:', vrfAddress);
@@ -85,9 +92,14 @@ async function main() {
   // If on hardhat network, add consumer to mock coordinator's subscription
   if (network.name === 'hardhat' && vrfCoordinatorV2MockAddress) {
     // Get contract instance for the already deployed VRFCoordinatorV2Mock
-    const vrfCoordinatorV2MockInstance = await ethers.getContractAt('VRFCoordinatorV2Mock', vrfCoordinatorV2MockAddress);
+    const vrfCoordinatorV2MockInstance = await ethers.getContractAt(
+      'VRFCoordinatorV2Mock',
+      vrfCoordinatorV2MockAddress,
+    );
     await vrfCoordinatorV2MockInstance.addConsumer(activeSubscriptionId, vrfAddress);
-    console.log(`VRFConsumer ${vrfAddress} added as a consumer to subscription ${activeSubscriptionId.toString()} on VRFCoordinatorV2Mock.`);
+    console.log(
+      `VRFConsumer ${vrfAddress} added as a consumer to subscription ${activeSubscriptionId.toString()} on VRFCoordinatorV2Mock.`,
+    );
   }
 
   // Deploy the PrizePool contract
@@ -112,12 +124,8 @@ async function main() {
 
   // Finally, deploy the CrypdoeBucks contract with linked library and references
   console.log('Deploying CrypdoeBucks main contract...');
-  // Link the FightLib library to the CrypdoeBucks contract
-  const cryptDoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks', {
-    libraries: {
-      FightLib: fightLibAddress,
-    },
-  });
+  // Try to get the factory first to see what the actual error is
+  const cryptDoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks');
   const cryptDoeBucks = await cryptDoeBucksFactory.deploy(vrfAddress, prizePoolAddress);
   await cryptDoeBucks.waitForDeployment();
   const cryptDoeBucksAddress = await cryptDoeBucks.getAddress();
