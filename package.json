@@ -49,8 +49,25 @@
   },
   "husky": {
     "hooks": {
+      "pre-commit": "lint-staged",
       "pre-push": "yarn run hook:pre-push"
     }
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.sol": [
+      "solhint --fix",
+      "prettier --write"
+    ],
+    "*.{json,js,md}": [
+      "prettier --write"
+    ],
+    "*.{ts,sol}": [
+      "npm run precommit"
+    ]
   },
   "engines": {
     "node": ">=22.0.0"
