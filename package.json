@@ -43,7 +43,9 @@
     "format:ts": "prettier '**/{*,''}.ts' --write; eslint '**/{*,''}.ts' --fix;",
     "format:sol": "prettier '**/*.sol' --write; solhint 'contracts/*.sol' --fix;",
     "lint": "prettier '**/{*,''}.{json,js,ts,sol}' --check; solhint 'contracts/*.sol'; eslint '**/{*,''}.{json,js,ts}';",
-    "hook:pre-push": "tsc --noEmit && prettier '**/{*,''}.{json,js,ts}' --check && eslint '**/{*,''}.{json,js,ts}'"
+    "hook:pre-push": "tsc --noEmit && prettier '**/{*,''}.{json,js,ts}' --check && eslint '**/{*,''}.{json,js,ts}'",
+    "graph:codegen": "npx graph codegen subgraph/subgraph.yaml --output-dir subgraph/generated/",
+    "graph:build": "npx graph build subgraph/subgraph.yaml --output-dir subgraph/build/"
   },
   "husky": {
     "hooks": {
@@ -57,6 +59,7 @@
     "@chainlink/contracts": "^0.8.0"
   },
   "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.97.1",
     "@nomicfoundation/ethereumjs-util": "^9.0.4",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.6",
     "@nomicfoundation/hardhat-ethers": "^3.0.5",
