@@ -61,7 +61,15 @@ async function main() {
     );
   }
 
-  // First, deploy the FightLib library
+  // Deploy the MetadataLib library
+  console.log('Deploying MetadataLib library...');
+  const metadataLibFactory = await ethers.getContractFactory('MetadataLib');
+  const metadataLib = await metadataLibFactory.deploy();
+  await metadataLib.waitForDeployment();
+  const metadataLibAddress = await metadataLib.getAddress();
+  console.log('MetadataLib deployed to:', metadataLibAddress);
+
+  // Deploy the FightLib library
   console.log('Deploying FightLib library...');
   const fightLibFactory = await ethers.getContractFactory('FightLib');
   const fightLib = await fightLibFactory.deploy();
@@ -124,8 +132,12 @@ async function main() {
 
   // Finally, deploy the CrypdoeBucks contract with linked library and references
   console.log('Deploying CrypdoeBucks main contract...');
-  // Try to get the factory first to see what the actual error is
-  const cryptDoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks');
+  // Link the MetadataLib library to the CrypdoeBucks contract
+  const cryptDoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks', {
+    libraries: {
+      MetadataLib: metadataLibAddress,
+    },
+  });
   const cryptDoeBucks = await cryptDoeBucksFactory.deploy(vrfAddress, prizePoolAddress);
   await cryptDoeBucks.waitForDeployment();
   const cryptDoeBucksAddress = await cryptDoeBucks.getAddress();
@@ -141,6 +153,7 @@ async function main() {
     console.log('VRFCoordinatorV2Mock:', vrfCoordinatorV2MockAddress);
     console.log('Active Subscription ID:', activeSubscriptionId.toString());
   }
+  console.log('MetadataLib:   ', metadataLibAddress);
   console.log('FightLib:      ', fightLibAddress);
   console.log('VRF Consumer:  ', vrfAddress);
   console.log('Prize Pool:    ', prizePoolAddress);

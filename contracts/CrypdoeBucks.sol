@@ -3,22 +3,24 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./IVRFv2Consumer.sol";
 import "./IPrizePool.sol";
 import "./FightLib.sol";
+import "./MetadataLib.sol";
 
 /**
  * @title CrypdoeBucks
  * @dev A contract for managing and fighting Crypto Bucks, refactored to be smaller.
  */
 
-contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, ReentrancyGuard, Pausable {
+contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausable {
     // Use FightLib library for fighting-related functions
     using FightLib for uint32;
+    // Use MetadataLib for dynamic metadata generation
+    using MetadataLib for MetadataLib.Buck;
     IVRFv2Consumer immutable VRF_CONTRACT;
     IPrizePool public prizePool;
     
@@ -155,24 +157,38 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         _unpause();
     }
 
-    // Set token URI for metadata
-    function setTokenURI(uint256 tokenId, string memory _tokenURI) external onlyOwner {
-        _setTokenURI(tokenId, _tokenURI);
+    // Generate dynamic metadata for a buck
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_exists(tokenId), "ERC721: URI query for nonexistent token");
+        
+        // Convert Buck struct to MetadataLib.Buck for compatibility
+        Buck memory buck = bucks[tokenId];
+        MetadataLib.Buck memory metaBuck = MetadataLib.Buck({
+            points: buck.points,
+            readyTime: buck.readyTime,
+            fightingStyle: buck.fightingStyle,
+            does: buck.does,
+            experience: buck.experience,
+            level: buck.level,
+            genetics: MetadataLib.Genetics({
+                strength: buck.genetics.strength,
+                speed: buck.genetics.speed,
+                vitality: buck.genetics.vitality,
+                intelligence: buck.genetics.intelligence
+            }),
+            hasSpecialAbility: buck.hasSpecialAbility
+        });
+        
+        return MetadataLib.generateTokenURI(metaBuck, tokenId);
     }
 
-    // Override tokenURI function from ERC721URIStorage
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(tokenId);
-    }
+    // Emit metadata update events when buck attributes change
+    event MetadataUpdate(uint256 indexed tokenId);
+    event BatchMetadataUpdate(uint256 fromTokenId, uint256 toTokenId);
 
-    // Override supportsInterface function
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-
-    // Override _burn function
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
+    // Internal function to emit metadata update
+    function _emitMetadataUpdate(uint256 tokenId) internal {
+        emit MetadataUpdate(tokenId);
     }
 
     // Could turn this into an internal function if we want to do the random genereration onchain, public is expensive
@@ -211,6 +227,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         _updateMaxDoeCount(_does); // Update the total doe count
 
         emit NewBuck(owner, id, _points, _fightingStyle, _does, genetics);
+        _emitMetadataUpdate(id);
         return id;
     }
 
@@ -264,6 +281,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         bucks[newBuckId].genetics = newGenetics;
 
         emit BuckBred(buckId1, buckId2, newBuckId);
+        _emitMetadataUpdate(newBuckId);
     }
 
     // Helper function to keep genetics within bounds
@@ -301,6 +319,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         }
 
         emit BuckTrained(buckId, trait, newValue);
+        _emitMetadataUpdate(buckId);
     }
 
     // End season function
@@ -431,6 +450,10 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
         // Check for level ups
         checkLevelUp(winId);
         checkLevelUp(loseId);
+        
+        // Emit metadata updates for both bucks
+        _emitMetadataUpdate(winId);
+        _emitMetadataUpdate(loseId);
     }
 
     // Check if a buck should level up
@@ -449,6 +472,7 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, ERC721URIStorage, Ownable, Reen
             }
 
             emit BuckLevelUp(buckId, buck.level);
+            _emitMetadataUpdate(buckId);
         }
     }
 
