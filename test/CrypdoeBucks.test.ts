@@ -1,3 +1,5 @@
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
+
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers as tsEthers } from 'ethers';
@@ -12,13 +14,12 @@ import {
 import { deployRandomNumberConsumerFixture } from './fixtures/RandomNumberConsumer';
 import { getEventData } from './utils';
 
-const scalefactor = 10n ** 18n;
 let CrypdoeBucksFactory: CrypdoeBucks__factory;
 let crypdoeBucks: CrypdoeBucks;
 // eslint-disable-next-line no-unused-vars
-let deployer: tsEthers.Signer;
-let user1: tsEthers.Signer;
-let user2: tsEthers.Signer;
+let deployer: HardhatEthersSigner;
+let user1: HardhatEthersSigner;
+let user2: HardhatEthersSigner;
 
 type buck = {
   points: number;
@@ -62,7 +63,6 @@ let randomNumberConsumerV2Address: string;
 let crypdoeBucksAddress: string;
 let randomNumberConsumerV2: VRFv2Consumer;
 let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock;
-const prizePool = ethers.parseEther('1'); // Example prize pool setup
 
 describe('CrypdoeBucks', () => {
   before(async () => {
@@ -78,40 +78,58 @@ describe('CrypdoeBucks', () => {
     randomNumberConsumerV2Address = await randomNumberConsumerV2.getAddress();
 
     const matingSeasonEnd = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days from now in seconds
+
+    // Deploy PrizePool first
+    const PrizePoolFactory = await ethers.getContractFactory('PrizePool');
+    const initialPrizePoolAmount = ethers.parseEther('1.0');
+    const trainingCost = ethers.parseEther('0.01');
+    const breedingCost = ethers.parseEther('0.05');
+
+    const prizePoolContract = await PrizePoolFactory.deploy(
+      matingSeasonEnd,
+      initialPrizePoolAmount,
+      trainingCost,
+      breedingCost,
+    );
+
+    const prizePoolAddress = await prizePoolContract.getAddress();
+
+    // Send ETH to the PrizePool contract to ensure it has enough funds
+    await deployer.sendTransaction({
+      to: prizePoolAddress,
+      value: ethers.parseEther('3.0'), // Send 3 ETH to the contract
+    });
+
+    // Now deploy CrypdoeBucks with the correct parameters
     CrypdoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks');
     crypdoeBucks = await CrypdoeBucksFactory.deploy(
       randomNumberConsumerV2Address,
-      matingSeasonEnd
+      prizePoolAddress,
     );
 
     crypdoeBucksAddress = await crypdoeBucks.getAddress();
 
-    await randomNumberConsumerV2.transferOwnership(
-      await crypdoeBucks.getAddress()
-    );
+    // Set the buck contract address in the PrizePool contract
+    await prizePoolContract.setBuckContract(crypdoeBucksAddress);
+
+    await randomNumberConsumerV2.transferOwnership(await crypdoeBucks.getAddress());
     await crypdoeBucks.acceptVRFOwnership();
 
     // deployer funds the contract with some ETH
+    const prizePoolAmount = ethers.parseEther('10.0');
     await deployer.sendTransaction({
       to: crypdoeBucksAddress,
-      value: prizePool,
+      value: prizePoolAmount,
     });
 
     expect(crypdoeBucks).to.not.be.undefined;
     // expect the contract to have some ETH
-    expect(await ethers.provider.getBalance(crypdoeBucksAddress)).to.equal(
-      prizePool
-    );
+    expect(await ethers.provider.getBalance(crypdoeBucksAddress)).to.equal(prizePoolAmount);
   });
 
   const mintBuck = async (userAddress: string, buck: buck) => {
     const receipt = await (
-      await crypdoeBucks.createBuck(
-        userAddress,
-        buck.points,
-        buck.fightingStyle,
-        buck.does
-      )
+      await crypdoeBucks.createBuck(userAddress, buck.points, buck.fightingStyle, buck.does)
     ).wait();
     expect(receipt).to.not.be.null;
     return receipt;
@@ -145,19 +163,14 @@ describe('CrypdoeBucks', () => {
     });
 
     it('Should be able to attack another buck, win and get the defenders does: winner', async () => {
-      let receipt = await (
-        await crypdoeBucks.connect(user1).prepareForFight(0, 1)
-      ).wait(1);
+      let receipt = await (await crypdoeBucks.connect(user1).prepareForFight(0, 1)).wait(1);
       if (!receipt) return;
 
       const event = getEventData('FightInitiated', crypdoeBucks, receipt);
       const requestId = event?.args[2];
 
       await expect(
-        vrfCoordinatorV2Mock.fulfillRandomWords(
-          requestId,
-          randomNumberConsumerV2Address
-        )
+        vrfCoordinatorV2Mock.fulfillRandomWords(requestId, randomNumberConsumerV2Address),
       ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
 
       receipt = await (await crypdoeBucks.connect(user1).fight(0, 1)).wait(1);
@@ -168,19 +181,14 @@ describe('CrypdoeBucks', () => {
     });
 
     it('Should be able to attack another buck, win and get the defenders does: loser', async () => {
-      let receipt = await (
-        await crypdoeBucks.connect(user2).prepareForFight(1, 0)
-      ).wait(1);
+      let receipt = await (await crypdoeBucks.connect(user2).prepareForFight(1, 0)).wait(1);
       if (!receipt) return;
 
       const event = getEventData('FightInitiated', crypdoeBucks, receipt);
       const requestId = event?.args[2];
 
       await expect(
-        vrfCoordinatorV2Mock.fulfillRandomWords(
-          requestId,
-          randomNumberConsumerV2Address
-        )
+        vrfCoordinatorV2Mock.fulfillRandomWords(requestId, randomNumberConsumerV2Address),
       ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
 
       receipt = await (await crypdoeBucks.connect(user2).fight(1, 0)).wait(1);
@@ -190,10 +198,7 @@ describe('CrypdoeBucks', () => {
       evaluateFightOutcome(fightEvent, buck1.does);
     });
 
-    const evaluateFightOutcome = (
-      event: tsEthers.LogDescription | null,
-      expectedDoes: number
-    ) => {
+    const evaluateFightOutcome = (event: tsEthers.LogDescription | null, expectedDoes: number) => {
       if (event?.args.doesMoved == 80085) {
         console.log('Draw!');
       } else if (event?.args.doesMoved > 0) {
@@ -207,9 +212,9 @@ describe('CrypdoeBucks', () => {
 
     it('Should not be able to attack another buck, if not owner', async () => {
       // Attempt to initiate a fight with user2's buck using user1's signer, which should fail
-      await expect(
-        crypdoeBucks.connect(user1).prepareForFight(1, 0)
-      ).to.be.revertedWith('Must be the buck owner');
+      await expect(crypdoeBucks.connect(user1).prepareForFight(1, 0)).to.be.revertedWith(
+        'Must be the buck owner',
+      );
     });
 
     it('Should not be able to attack another buck, if not ready', async () => {
@@ -223,23 +228,20 @@ describe('CrypdoeBucks', () => {
       const fightInitiationEventLog = getEventData(
         'FightInitiated',
         crypdoeBucks,
-        fightInitiationEvent
+        fightInitiationEvent,
       );
       const requestId = fightInitiationEventLog?.args[2];
 
       await expect(
-        vrfCoordinatorV2Mock.fulfillRandomWords(
-          requestId,
-          randomNumberConsumerV2Address
-        )
+        vrfCoordinatorV2Mock.fulfillRandomWords(requestId, randomNumberConsumerV2Address),
       ).to.emit(randomNumberConsumerV2, 'RequestFulfilled');
 
       await (await crypdoeBucks.connect(user1).fight(0, 1)).wait(1);
 
       // Attempt to initiate another fight with user1's buck before cooldown expires
-      await expect(
-        crypdoeBucks.connect(user1).prepareForFight(0, 1)
-      ).to.be.revertedWith('Buck is not ready to fight.');
+      await expect(crypdoeBucks.connect(user1).prepareForFight(0, 1)).to.be.revertedWith(
+        'Buck is not ready to fight.',
+      );
     });
   });
 
@@ -259,7 +261,7 @@ describe('CrypdoeBucks', () => {
 
     it('Should revert if non-owner tries to end season', async function () {
       await expect(crypdoeBucks.connect(user2).endSeason(0)).to.be.revertedWith(
-        'Must be the buck owner'
+        'Must be the buck owner',
       );
     });
 
@@ -268,43 +270,43 @@ describe('CrypdoeBucks', () => {
       await crypdoeBucks.connect(user2).approve(crypdoeBucksAddress, 2);
       // User2 burns their buck
       await expect(crypdoeBucks.connect(user2).endSeason(2)).to.be.revertedWith(
-        'Buck does count is 0.'
+        'Buck does count is 0.',
       );
     });
 
     it('Should transfer correct prize pool percentage to buck owner', async function () {
-      const prizePoolPercentage =
-        (BigInt(buck1.does) * scalefactor) / maxDoeCount;
-
-      // Assuming buck1 has 10 does, making it 10% of total does
-      const expectedPrize = (prizePool * prizePoolPercentage) / scalefactor;
-
       // Track the prize pool balance before the prize is awarded
-      const initialPrizePool = await crypdoeBucks.prizePool();
+      const initialPrizePool = await crypdoeBucks.getPrizePoolValue();
 
-      expect(initialPrizePool).to.equal(prizePool);
+      // Store the actual initial prize pool value for calculations
+      const actualInitialPrizePool = BigInt(initialPrizePool.toString());
+
+      // Calculate the expected prize amount based on the actual prize pool
+      // buck1 has 69 does out of 100 total does (69%)
+      const expectedPrizeAmount = (actualInitialPrizePool * BigInt(buck1.does)) / maxDoeCount;
 
       // User1 Gives approval to the contract to burn their buck
       await crypdoeBucks.connect(user1).approve(crypdoeBucksAddress, 0);
 
       // User1 burns their buck
-      const receipt = await (
-        await crypdoeBucks.connect(user1).endSeason(0)
-      ).wait();
+      const receipt = await (await crypdoeBucks.connect(user1).endSeason(0)).wait();
 
       if (!receipt) return;
 
       const event = getEventData('EndSeason', crypdoeBucks, receipt);
 
-      // Check the user received the correct prize
+      // Check the buck ID is correct in the event
       expect(event?.args[0]).to.equal(0);
-      expect(event?.args[1]).to.equal(690000000000000000n);
+
+      // Check the prize amount in the event matches our expected value
+      expect(event?.args[1]).to.equal(expectedPrizeAmount);
 
       // Track prize pool balance after the prize is awarded
-      const finalPrizePool = await crypdoeBucks.prizePool();
+      const finalPrizePool = await crypdoeBucks.getPrizePoolValue();
+      const actualFinalPrizePool = BigInt(finalPrizePool.toString());
 
-      // Check if the prize pool has been updated correctly
-      expect(initialPrizePool - finalPrizePool).to.equal(expectedPrize);
+      // Check that the prize amount was correctly deducted from the prize pool
+      expect(actualInitialPrizePool - actualFinalPrizePool).to.equal(expectedPrizeAmount);
 
       // Check if the buck has been burned by querying its owner, which should revert
       await expect(crypdoeBucks.ownerOf(0)).to.be.reverted;

@@ -6,10 +6,7 @@ task('accounts', 'Prints the list of accounts')
     let { count }: { count?: number } = taskArguments;
     const accounts = await hre.ethers.getSigners();
     const accountsLength = accounts.length;
-    count =
-      (count = count ?? accountsLength) < accountsLength
-        ? count
-        : accountsLength;
+    count = (count = count ?? accountsLength) < accountsLength ? count : accountsLength;
 
     for (let i = 0; i < count && i < accountsLength; i++) {
       console.log(accounts[i].address);

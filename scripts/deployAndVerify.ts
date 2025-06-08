@@ -31,7 +31,7 @@ async function main() {
   }, 1000 * 60);
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error(error);
   process.exitCode = 1;
 });

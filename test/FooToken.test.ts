@@ -1,12 +1,6 @@
-import {
-  anyUint,
-  anyValue,
-} from '@nomicfoundation/hardhat-chai-matchers/withArgs';
+import { anyUint, anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
-import {
-  loadFixture,
-  reset,
-} from '@nomicfoundation/hardhat-toolbox/network-helpers';
+import { loadFixture, reset } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect, assert } from 'chai';
 import { ZeroAddress } from 'ethers';
 import { ethers } from 'hardhat';
@@ -21,9 +15,7 @@ describe('FooToken', () => {
   // hooks
   before(async () => {
     [owner, ...addresses] = await ethers.getSigners();
-    fooTokenFactory = (await ethers.getContractFactory(
-      'FooToken'
-    )) as FooToken__factory;
+    fooTokenFactory = (await ethers.getContractFactory('FooToken')) as FooToken__factory;
   });
 
   beforeEach(async () => {
@@ -45,11 +37,7 @@ describe('FooToken', () => {
 
   it('the token symbol should be correct', async () => {
     // assert
-    assert.equal(
-      await fooToken.symbol(),
-      'FOO',
-      'The token symbol must be valid.'
-    );
+    assert.equal(await fooToken.symbol(), 'FOO', 'The token symbol must be valid.');
   });
 
   it('the token decimal should be correct', async () => {
@@ -62,7 +50,7 @@ describe('FooToken', () => {
 
   it('reverts when transferring tokens to the zero address', async () => {
     await expect(fooToken.transfer(ZeroAddress, 1n)).to.be.revertedWith(
-      'ERC20: transfer to the zero address'
+      'ERC20: transfer to the zero address',
     );
   });
 
@@ -83,7 +71,7 @@ describe('FooToken', () => {
     await expect(loadFixture(transferFixture)).to.changeTokenBalances(
       fooToken,
       [from, to],
-      [-value, value]
+      [-value, value],
     );
   });
 });

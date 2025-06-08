@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  cryptdoebucks-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/labs
+      - node_modules:/labs/node_modules
+    ports:
+      - "8545:8545"  # Hardhat Node
+    command: bash -c "yarn compile && yarn hardhat node"
+    environment:
+      - NODE_ENV=development
+
+  # Service for running tests
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/labs
+      - node_modules:/labs/node_modules
+    command: yarn test
+    depends_on:
+      - cryptdoebucks-dev
+
+volumes:
+  node_modules:

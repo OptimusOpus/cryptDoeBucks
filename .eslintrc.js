@@ -40,10 +40,7 @@ module.exports = {
       },
     ],
     'sort-vars': ['warn', { ignoreCase: true }],
-    'node/no-unsupported-features/es-syntax': [
-      'error',
-      { ignores: ['modules'] },
-    ],
+    'node/no-unsupported-features/es-syntax': ['error', { ignores: ['modules'] }],
   },
 
   ignorePatterns: ['dist', '**/*.d.ts'],

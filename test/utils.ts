@@ -7,7 +7,7 @@ export const getRevertMessage = (error: any) => {
   error = error.substring(error.indexOf(''));
   error = error.substring(
     error.indexOf(prefix) + prefix.length,
-    error.indexOf(suffix) > -1 ? error.indexOf(suffix) : error.length
+    error.indexOf(suffix) > -1 ? error.indexOf(suffix) : error.length,
   );
   // Depending on the formatting of the message, it might wrap the
   // revert message in '' and mention "reverted" instead of revert.
@@ -19,7 +19,7 @@ export const getRevertMessage = (error: any) => {
 export const getEventData = (
   eventName: string,
   contract: ethers.BaseContract,
-  txResult: ethers.ContractTransactionReceipt
+  txResult: ethers.ContractTransactionReceipt,
 ): ethers.LogDescription | null => {
   if (!Array.isArray(txResult.logs)) return null;
   for (const log of txResult.logs) {
