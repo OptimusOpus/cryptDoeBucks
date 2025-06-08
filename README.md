@@ -236,14 +236,119 @@ yarn run build    # install solc and other tools in the docker image
 
 Don't forget to copy the .env.example file to a file named .env, and then edit it to fill in the details.
 
-## Running all the tests
+## Local Development Setup
+
+### Running a Local Blockchain Node
+
+For local development and testing, you can use Hardhat's built-in local blockchain node. This node simulates an Ethereum environment on your machine, allowing you to deploy and interact with your smart contracts without needing a live testnet.
+
+To start the local Hardhat node, run the following command in your project's root directory:
 
 ```shell
-yarn run test
-yarn run test:trace       # shows logs + calls
-yarn run test:fresh       # force compile and then run tests
-yarn run test:coverage    # run tests with coverage reports
+yarn start
 ```
+Alternatively, you can use:
+```shell
+yarn node
+```
+
+Upon starting, Hardhat will create a set of default accounts, each funded with test ETH. The private keys and addresses of these accounts will be displayed in your terminal. You can use these accounts to deploy contracts and send transactions on your local node.
+
+**Important:** This local node is for development purposes only. Its state is typically ephemeral and will be reset each time you stop and restart the node, unless you've configured persistent storage (which is not the default).
+
+### Deploying Contracts Locally
+
+Once your local Hardhat node is running (see "Running a Local Blockchain Node" above), you can deploy the CrypdoeBucks smart contracts to it using the following command:
+
+```shell
+yarn deploy:local
+```
+
+This script will:
+1.  Compile your smart contracts.
+2.  Deploy all necessary contracts (including `CrypdoeBucks`, `PrizePool`, `FightLib`, and a mock `VRFCoordinatorV2Mock` for local randomness) to your local Hardhat node.
+3.  Output the addresses of the deployed contracts to your terminal.
+
+### Using Deployed Contracts in Your Frontend (e.g., Next.js)
+
+After running `yarn deploy:local`, the terminal output will include a summary of deployed contracts and their addresses. Look for lines like:
+
+```
+Summary of deployed contracts:
+-----------------------------
+VRFCoordinatorV2Mock: 0x...
+Active Subscription ID: 1
+FightLib:       0x...
+VRF Consumer:   0x...
+Prize Pool:     0x...
+CrypdoeBucks:   0x...
+```
+
+You will need these addresses to interact with your smart contracts from your frontend application. For example, in a Next.js application, you would typically store these addresses in an environment file (e.g., `.env.local`) or a configuration file:
+
+```
+NEXT_PUBLIC_CRYPTOEBUCKS_ADDRESS=0x...
+NEXT_PUBLIC_PRIZEPOOL_ADDRESS=0x...
+NEXT_PUBLIC_VRF_CONSUMER_ADDRESS=0x...
+// Add other addresses as needed by your frontend
+```
+
+Then, in your frontend code (using libraries like Ethers.js or Web3.js), you would use these addresses to instantiate your contract objects and interact with them.
+
+**Example (conceptual Ethers.js):**
+
+```javascript
+import { ethers } from "ethers";
+import CrypdoeBucksAbi from "./abis/CrypdoeBucks.json"; // You'll need the ABI
+
+const provider = new ethers.providers.Web3Provider(window.ethereum);
+const crypdoeBucksAddress = process.env.NEXT_PUBLIC_CRYPTOEBUCKS_ADDRESS;
+const crypdoeBucksContract = new ethers.Contract(crypdoeBucksAddress, CrypdoeBucksAbi.abi, provider.getSigner());
+
+// Now you can call functions on crypdoeBucksContract
+// async function getBuckDetails() {
+//   const details = await crypdoeBucksContract.getBuck(0); // Example function
+//   console.log(details);
+// }
+```
+
+Remember to also include the ABIs (Application Binary Interfaces) of your contracts in your frontend project. These are typically generated during compilation (e.g., in `artifacts/contracts/.../*.json` in Hardhat projects) and describe how to interact with the contract's functions.
+
+## Running all the tests
+
+You can run the automated tests for the smart contracts using the following commands. By default, these tests run against a temporary, in-memory Hardhat Network instance that is automatically created and torn down. This is suitable for most unit testing scenarios.
+
+```shell
+yarn run test             # Run all tests
+yarn run test:trace       # Run tests and show call traces and logs
+yarn run test:fresh       # Force recompile contracts and then run tests
+yarn run test:coverage    # Run tests and generate a code coverage report
+```
+
+### Testing Against a Persistent Local Node
+
+By default, `yarn test` runs your tests against an in-memory Hardhat Network instance that is created on the fly and torn down after the tests complete. This is fast and convenient for most unit testing.
+
+However, you might want to run your tests against a persistent local Hardhat node that you've started manually (e.g., using `yarn start` or `yarn node`). This can be useful if you want to inspect the state of the blockchain after tests, or if your tests interact with contracts deployed by a separate script (like `yarn deploy:local`).
+
+To do this:
+
+1.  **Start your local Hardhat node in a separate terminal:**
+    ```shell
+    yarn start
+    ```
+    Keep this terminal window open. This node runs on `http://127.0.0.1:8545/` by default.
+
+2.  **Run your tests specifying the `localhost` network in another terminal:**
+    ```shell
+    yarn test --network localhost
+    ```
+    Or, for trace logs:
+    ```shell
+    yarn test:trace --network localhost
+    ```
+
+This will direct Hardhat to run your tests against your already running local node instead of creating a new in-memory one.
 
 ## Formatters & Linters
 

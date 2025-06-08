@@ -70,6 +70,12 @@ const config: HardhatUserConfig = {
           'true' === process.env.ALLOW_UNLIMITED_CONTRACT_SIZE.toLowerCase()) ||
         false,
     },
+    localhost: {
+      url: "http://127.0.0.1:8545/",
+      // chainId: 31337, // Hardhat's default chainId for the node network
+      // accounts: Hardhat provides default accounts when running `npx hardhat node`
+      // No need to specify accounts here unless you want to override the node's defaults
+    },
     custom: {
       url: process.env.CUSTOM_NETWORK_URL || '',
       accounts: {

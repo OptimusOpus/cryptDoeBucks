@@ -16,6 +16,7 @@
     "storage:check": "hardhat storage-check",
     "size": "hardhat size-contracts",
     "deploy": "deploy.sh",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
     "deploy:all": "hardhat run scripts/deploy.ts --network",
     "deploy-verify:all": "hardhat run scripts/deployAndVerify.ts --network",
     "verify": "hardhat verify --network",
