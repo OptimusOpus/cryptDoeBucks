@@ -53,14 +53,14 @@ jobs:
       - name: Install dependencies with dev deps
         run: yarn install --production=false
 
+      - name: Linters & Formatters
+        run: yarn run lint
+
       - name: Hardhat compile
         run: yarn run hardhat compile --force
 
       - name: Tests
         run: yarn run hardhat test --no-compile
-
-      - name: Linters & Formatters
-        run: yarn run hook:pre-push
 
       - name: Analyze to contracts
         if: steps.verify-changed-sol-files.outputs.files_changed == 'true'
