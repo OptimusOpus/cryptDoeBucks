@@ -44,13 +44,13 @@
     "format:ts": "prettier '**/{*,''}.ts' --write; eslint '**/{*,''}.ts' --fix;",
     "format:sol": "prettier '**/*.sol' --write; solhint 'contracts/*.sol' --fix;",
     "lint": "prettier '**/{*,''}.{json,js,ts,sol}' --check; solhint 'contracts/*.sol'; eslint '**/{*,''}.{json,js,ts}';",
-    "hook:pre-push": "tsc --noEmit && prettier '**/{*,''}.{json,js,ts}' --check && eslint '**/{*,''}.{json,js,ts}'",
+    "hook:pre-push": "yarn run lint",
     "graph:codegen": "npx graph codegen subgraph/subgraph.yaml --output-dir subgraph/generated/",
     "graph:build": "npx graph build subgraph/subgraph.yaml --output-dir subgraph/build/"
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged && hardhat compile && hardhat test",
+      "pre-commit": "pre-commit run --all-files && lint-staged && hardhat compile && hardhat test",
       "pre-push": "yarn run hook:pre-push"
     }
   },
