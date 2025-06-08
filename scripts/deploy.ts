@@ -69,6 +69,14 @@ async function main() {
   const metadataLibAddress = await metadataLib.getAddress();
   console.log('MetadataLib deployed to:', metadataLibAddress);
 
+  // Deploy the RandomLib library
+  console.log('Deploying RandomLib library...');
+  const randomLibFactory = await ethers.getContractFactory('RandomLib');
+  const randomLib = await randomLibFactory.deploy();
+  await randomLib.waitForDeployment();
+  const randomLibAddress = await randomLib.getAddress();
+  console.log('RandomLib deployed to:', randomLibAddress);
+
   // Deploy the FightLib library
   console.log('Deploying FightLib library...');
   const fightLibFactory = await ethers.getContractFactory('FightLib');
@@ -132,10 +140,11 @@ async function main() {
 
   // Finally, deploy the CrypdoeBucks contract with linked library and references
   console.log('Deploying CrypdoeBucks main contract...');
-  // Link the MetadataLib library to the CrypdoeBucks contract
+  // Link the MetadataLib and RandomLib libraries to the CrypdoeBucks contract
   const cryptDoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks', {
     libraries: {
       MetadataLib: metadataLibAddress,
+      RandomLib: randomLibAddress,
     },
   });
   const cryptDoeBucks = await cryptDoeBucksFactory.deploy(vrfAddress, prizePoolAddress);
@@ -154,11 +163,12 @@ async function main() {
     console.log('Active Subscription ID:', activeSubscriptionId.toString());
   }
   console.log('MetadataLib:   ', metadataLibAddress);
+  console.log('RandomLib:     ', randomLibAddress);
   console.log('FightLib:      ', fightLibAddress);
   console.log('VRF Consumer:  ', vrfAddress);
   console.log('Prize Pool:    ', prizePoolAddress);
   console.log('CrypdoeBucks:  ', cryptDoeBucksAddress);
-  console.log('\nDeployment complete.');
+  console.log('\nDeployment complete with minting capabilities!');
 }
 
 main().catch(error => {

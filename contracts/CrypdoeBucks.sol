@@ -10,6 +10,7 @@ import "./IVRFv2Consumer.sol";
 import "./IPrizePool.sol";
 import "./FightLib.sol";
 import "./MetadataLib.sol";
+import "./RandomLib.sol";
 
 /**
  * @title CrypdoeBucks
@@ -21,6 +22,8 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
     using FightLib for uint32;
     // Use MetadataLib for dynamic metadata generation
     using MetadataLib for MetadataLib.Buck;
+    // Use RandomLib for random buck generation
+    using RandomLib for uint256;
     IVRFv2Consumer immutable VRF_CONTRACT;
     IPrizePool public prizePool;
     
@@ -90,6 +93,42 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
     // Mapping for breeding cooldowns
     mapping(uint256 => uint32) public breedingCooldowns;
 
+    // =============================================================
+    //                      MINTING CONFIGURATION
+    // =============================================================
+    
+    // Collection settings
+    uint256 public constant MAX_SUPPLY = 10000;
+    uint256 public mintPrice = 0.05 ether;
+    uint256 public maxMintsPerTx = 10;
+    bool public publicSaleActive = false;
+    
+    // Minting tracking
+    mapping(address => uint256) public mintedPerAddress;
+    uint256 public maxMintsPerAddress = 20;
+    
+    // Random generation modes
+    enum RandomMode { PSEUDO, VRF }
+    RandomMode public currentRandomMode = RandomMode.PSEUDO;
+    
+    // VRF pending mints (for premium random)
+    struct PendingMint {
+        address minter;
+        uint256 quantity;
+        uint256 payment;
+    }
+    mapping(uint256 => PendingMint) public pendingMints; // requestId => PendingMint
+    
+    // Pricing for guaranteed rarity mints
+    uint256[6] public guaranteedRarityPrices = [
+        0 ether,      // Invalid (index 0)
+        0.05 ether,   // Common
+        0.1 ether,    // Uncommon  
+        0.2 ether,    // Rare
+        0.5 ether,    // Epic
+        2.0 ether     // Legendary
+    ];
+
     event FightInitiated(uint256 attacker, uint256 defender, uint256 randomRequestId);
     event FightConcluded(
         uint256 defender,
@@ -106,6 +145,12 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
     event SpecialAbilityUnlocked(uint256 buckId);
     event Received(address sender, uint256 amount);
     event EndSeason(uint256 buckId, uint256 prizeAmount);
+    
+    // Minting events
+    event MintRequested(address indexed minter, uint256 quantity, RandomMode mode);
+    event BuckMinted(address indexed to, uint256 indexed tokenId, uint32 points, uint32 style, uint32 does, string rarity);
+    event BatchMinted(address indexed to, uint256 startTokenId, uint256 quantity);
+    event GuaranteedRarityMinted(address indexed to, uint256 indexed tokenId, uint8 rarity);
 
     modifier onlyOwnerOf(uint256 _id) {
         require(msg.sender == buckToOwner[_id], "Must be the buck owner");
@@ -229,6 +274,279 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
         emit NewBuck(owner, id, _points, _fightingStyle, _does, genetics);
         _emitMetadataUpdate(id);
         return id;
+    }
+
+    // =============================================================
+    //                      PUBLIC MINTING FUNCTIONS
+    // =============================================================
+
+    /**
+     * @dev Public mint with pseudorandom stats (instant)
+     */
+    function mintBuck(uint256 quantity) external payable nonReentrant whenNotPaused {
+        require(publicSaleActive, "Public sale not active");
+        require(quantity > 0 && quantity <= maxMintsPerTx, "Invalid quantity");
+        require(mintedPerAddress[msg.sender] + quantity <= maxMintsPerAddress, "Exceeds max per address");
+        require(bucks.length + quantity <= MAX_SUPPLY, "Exceeds max supply");
+        require(msg.value >= mintPrice * quantity, "Insufficient payment");
+        
+        mintedPerAddress[msg.sender] += quantity;
+        
+        for (uint256 i = 0; i < quantity; i++) {
+            _mintRandomBuck(msg.sender);
+        }
+        
+        emit MintRequested(msg.sender, quantity, RandomMode.PSEUDO);
+        
+        if (quantity > 1) {
+            emit BatchMinted(msg.sender, bucks.length - quantity, quantity);
+        }
+    }
+
+    /**
+     * @dev Batch mint with discount for 5+ bucks
+     */
+    function mintBuckBatch(uint256 quantity) external payable nonReentrant whenNotPaused {
+        require(publicSaleActive, "Public sale not active");
+        require(quantity >= 5 && quantity <= 20, "Batch: 5-20 bucks only");
+        require(mintedPerAddress[msg.sender] + quantity <= maxMintsPerAddress, "Exceeds max per address");
+        require(bucks.length + quantity <= MAX_SUPPLY, "Exceeds max supply");
+        
+        uint256 batchPrice = (mintPrice * 95) / 100; // 5% discount
+        require(msg.value >= batchPrice * quantity, "Insufficient payment for batch");
+        
+        mintedPerAddress[msg.sender] += quantity;
+        uint256 startTokenId = bucks.length;
+        
+        for (uint256 i = 0; i < quantity; i++) {
+            _mintRandomBuck(msg.sender);
+        }
+        
+        emit MintRequested(msg.sender, quantity, RandomMode.PSEUDO);
+        emit BatchMinted(msg.sender, startTokenId, quantity);
+    }
+
+    /**
+     * @dev Premium VRF mint for true randomness
+     */
+    function mintBuckVRF(uint256 quantity) external payable nonReentrant whenNotPaused {
+        require(currentRandomMode == RandomMode.VRF, "VRF mode not active");
+        require(quantity > 0 && quantity <= maxMintsPerTx, "Invalid quantity");
+        require(mintedPerAddress[msg.sender] + quantity <= maxMintsPerAddress, "Exceeds max per address");
+        require(bucks.length + quantity <= MAX_SUPPLY, "Exceeds max supply");
+        
+        uint256 premiumPrice = mintPrice + 0.01 ether; // Premium for VRF
+        require(msg.value >= premiumPrice * quantity, "Insufficient payment for VRF");
+        
+        // Request random number from Chainlink VRF
+        uint256 requestId = VRF_CONTRACT.requestRandomWords();
+        
+        // Store pending mint
+        pendingMints[requestId] = PendingMint({
+            minter: msg.sender,
+            quantity: quantity,
+            payment: msg.value
+        });
+        
+        emit MintRequested(msg.sender, quantity, RandomMode.VRF);
+    }
+
+    /**
+     * @dev Guaranteed rarity mint
+     */
+    function mintGuaranteedRarity(uint8 minRarity, uint256 quantity) external payable nonReentrant whenNotPaused {
+        require(publicSaleActive, "Public sale not active");
+        require(minRarity >= 1 && minRarity <= 5, "Invalid rarity tier");
+        require(quantity > 0 && quantity <= 5, "Max 5 guaranteed rarity per tx");
+        require(mintedPerAddress[msg.sender] + quantity <= maxMintsPerAddress, "Exceeds max per address");
+        require(bucks.length + quantity <= MAX_SUPPLY, "Exceeds max supply");
+        require(msg.value >= guaranteedRarityPrices[minRarity] * quantity, "Insufficient payment for guaranteed rarity");
+        
+        mintedPerAddress[msg.sender] += quantity;
+        
+        for (uint256 i = 0; i < quantity; i++) {
+            uint256 tokenId = _mintGuaranteedRarityBuck(msg.sender, minRarity);
+            emit GuaranteedRarityMinted(msg.sender, tokenId, minRarity);
+        }
+    }
+
+    /**
+     * @dev Owner-only free mint for airdrops/promotions
+     */
+    function freeMint(address to, uint256 quantity) external onlyOwner {
+        require(quantity <= 100, "Max 100 per free mint");
+        require(bucks.length + quantity <= MAX_SUPPLY, "Exceeds max supply");
+        
+        uint256 startTokenId = bucks.length;
+        
+        for (uint256 i = 0; i < quantity; i++) {
+            _mintRandomBuck(to);
+        }
+        
+        emit BatchMinted(to, startTokenId, quantity);
+    }
+
+    /**
+     * @dev Fulfill VRF mint request
+     */
+    function fulfillVRFMint(uint256 requestId) external nonReentrant {
+        require(pendingMints[requestId].minter != address(0), "Invalid request");
+        
+        // Get random words from VRF
+        (bool fulfilled, uint256[] memory randomWords) = VRF_CONTRACT.getRequestStatus(requestId);
+        require(fulfilled, "Random number not ready");
+        require(randomWords.length > 0, "No random words");
+        
+        PendingMint memory mintData = pendingMints[requestId];
+        delete pendingMints[requestId];
+        
+        // Update minting tracking
+        mintedPerAddress[mintData.minter] += mintData.quantity;
+        
+        // Use VRF randomness as base seed
+        uint256 baseSeed = randomWords[0];
+        uint256 startTokenId = bucks.length;
+        
+        for (uint256 i = 0; i < mintData.quantity; i++) {
+            _mintVRFBuck(mintData.minter, baseSeed, i);
+        }
+        
+        emit BatchMinted(mintData.minter, startTokenId, mintData.quantity);
+    }
+
+    // =============================================================
+    //                      INTERNAL MINTING FUNCTIONS
+    // =============================================================
+
+    /**
+     * @dev Internal function to mint a buck with random stats
+     */
+    function _mintRandomBuck(address to) internal returns (uint256) {
+        uint256 tokenId = bucks.length;
+        uint256 seed = RandomLib.generateMintSeed(to, tokenId);
+        RandomLib.BuckStats memory stats = RandomLib.generateRandomStats(seed);
+        
+        return _mintBuckWithStats(to, stats);
+    }
+
+    /**
+     * @dev Internal function to mint a buck with VRF randomness
+     */
+    function _mintVRFBuck(address to, uint256 baseSeed, uint256 index) internal returns (uint256) {
+        uint256 seed = uint256(keccak256(abi.encodePacked(baseSeed, index, to)));
+        RandomLib.BuckStats memory stats = RandomLib.generateRandomStats(seed);
+        
+        return _mintBuckWithStats(to, stats);
+    }
+
+    /**
+     * @dev Internal function to mint a buck with guaranteed rarity
+     */
+    function _mintGuaranteedRarityBuck(address to, uint8 minRarity) internal returns (uint256) {
+        uint256 tokenId = bucks.length;
+        uint256 seed = RandomLib.generateMintSeed(to, tokenId);
+        RandomLib.BuckStats memory stats = RandomLib.generateGuaranteedRarityStats(seed, minRarity);
+        
+        return _mintBuckWithStats(to, stats);
+    }
+
+    /**
+     * @dev Internal function to mint buck with pre-generated stats
+     */
+    function _mintBuckWithStats(address to, RandomLib.BuckStats memory stats) internal returns (uint256) {
+        uint256 tokenId = bucks.length;
+        
+        // Create buck struct
+        Buck memory newBuck = Buck({
+            points: stats.points,
+            readyTime: uint32(block.timestamp),
+            fightingStyle: stats.fightingStyle,
+            does: stats.does,
+            experience: 0,
+            level: 1,
+            genetics: Genetics({
+                strength: stats.genetics.strength,
+                speed: stats.genetics.speed,
+                vitality: stats.genetics.vitality,
+                intelligence: stats.genetics.intelligence
+            }),
+            hasSpecialAbility: false
+        });
+        
+        // Add to array and mint
+        bucks.push(newBuck);
+        _mint(to, tokenId);
+        buckToOwner[tokenId] = to;
+        _updateMaxDoeCount(stats.does);
+        
+        // Calculate rarity for event
+        RandomLib.RarityTier tier = RandomLib.calculateRarityTier(stats.genetics);
+        string memory rarityName = RandomLib.getRarityName(tier);
+        
+        // Emit events
+        emit BuckMinted(to, tokenId, stats.points, stats.fightingStyle, stats.does, rarityName);
+        _emitMetadataUpdate(tokenId);
+        
+        return tokenId;
+    }
+
+    // =============================================================
+    //                      ADMIN FUNCTIONS
+    // =============================================================
+
+    /**
+     * @dev Toggle public sale state
+     */
+    function togglePublicSale() external onlyOwner {
+        publicSaleActive = !publicSaleActive;
+    }
+
+    /**
+     * @dev Set mint price
+     */
+    function setMintPrice(uint256 newPrice) external onlyOwner {
+        mintPrice = newPrice;
+    }
+
+    /**
+     * @dev Set max mints per transaction
+     */
+    function setMaxMintsPerTx(uint256 newMax) external onlyOwner {
+        require(newMax > 0 && newMax <= 50, "Invalid max per tx");
+        maxMintsPerTx = newMax;
+    }
+
+    /**
+     * @dev Set max mints per address
+     */
+    function setMaxMintsPerAddress(uint256 newMax) external onlyOwner {
+        maxMintsPerAddress = newMax;
+    }
+
+    /**
+     * @dev Set random mode (PSEUDO or VRF)
+     */
+    function setRandomMode(RandomMode mode) external onlyOwner {
+        currentRandomMode = mode;
+    }
+
+    /**
+     * @dev Update guaranteed rarity prices
+     */
+    function setGuaranteedRarityPrice(uint8 rarity, uint256 price) external onlyOwner {
+        require(rarity >= 1 && rarity <= 5, "Invalid rarity");
+        guaranteedRarityPrices[rarity] = price;
+    }
+
+    /**
+     * @dev Withdraw contract funds
+     */
+    function withdraw() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        
+        (bool success, ) = payable(owner()).call{value: balance}("");
+        require(success, "Withdrawal failed");
     }
 
     // Breed two bucks to create a new one with combined traits

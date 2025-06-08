@@ -412,6 +412,133 @@ yarn run finder --path contracts/Workshop.sol --name Workshop abi --colorify --c
 yarn run finder --help    # see all supported outputs (abi, metadata, bytecode and more than 20+ outputs)
 ```
 
+## NFT Collection & Random Minting
+
+CrypdoeBucks now features a complete NFT collection system with dynamic metadata generation and multiple minting options.
+
+### Minting System Features
+
+- **Random Stats Generation**: Each buck is minted with unique genetics, combat stats, and rarity
+- **Dynamic Metadata**: Real-time JSON/SVG generation that updates as bucks level up
+- **Multiple Minting Options**: Regular, batch, guaranteed rarity, and VRF premium minting
+- **Weighted Rarity Distribution**: Common to Legendary rarities with proper scarcity
+- **Gas Optimization**: Batch minting with 5% discount for 5+ bucks
+
+### Available Minting Functions
+
+#### 1. Regular Random Minting
+```javascript
+// Mint 1-10 bucks with pseudorandom stats
+await cryptDoeBucks.mintBuck(quantity, { value: mintPrice * quantity });
+```
+
+#### 2. Batch Minting (5% Discount)
+```javascript
+// Mint 5-20 bucks with 5% discount
+const batchPrice = (mintPrice * 95n) / 100n;
+await cryptDoeBucks.mintBuckBatch(quantity, { value: batchPrice * quantity });
+```
+
+#### 3. Guaranteed Rarity Minting
+```javascript
+// Mint with guaranteed minimum rarity
+// Rarity tiers: 1=Common, 2=Uncommon, 3=Rare, 4=Epic, 5=Legendary
+const rarityPrice = await cryptDoeBucks.guaranteedRarityPrices(3); // Rare
+await cryptDoeBucks.mintGuaranteedRarity(3, 1, { value: rarityPrice });
+```
+
+#### 4. VRF Premium Minting (when enabled)
+```javascript
+// Premium minting with Chainlink VRF for true randomness
+const premiumPrice = mintPrice + ethers.parseEther("0.01");
+await cryptDoeBucks.mintBuckVRF(quantity, { value: premiumPrice * quantity });
+```
+
+### Running the Minting Demo
+
+After deploying locally, run the comprehensive minting demo:
+
+```shell
+npx hardhat run simple-mint-test.js --network localhost
+```
+
+This demo will:
+- Deploy fresh contracts with all libraries linked
+- Enable public sale
+- Test all minting functions
+- Display generated buck stats and rarities
+- Show gas usage and pricing
+
+### Demo Output Example
+```
+🎲 Testing Random Minting:
+Mint Price: 0.05 ETH
+✅ Buck minted successfully!
+
+📊 Generated Buck Stats:
+Name: CrypdoeBuck #0
+Fighting Style: Defensive
+Rarity: Common
+Genetics: Strength: 1/10, Speed: 2/10, Vitality: 3/10, Intelligence: 2/10
+
+🎨 Rarity Variety in Batch:
+Buck #1: Common
+Buck #4: Uncommon
+📈 Found 2 different rarities: Common, Uncommon
+
+✅ Ready for NFT launch! 🚀
+```
+
+### Admin Configuration
+
+Owners can configure the minting system:
+
+```javascript
+// Toggle public sale
+await cryptDoeBucks.togglePublicSale();
+
+// Set mint price
+await cryptDoeBucks.setMintPrice(ethers.parseEther("0.08"));
+
+// Set guaranteed rarity pricing
+await cryptDoeBucks.setGuaranteedRarityPrice(5, ethers.parseEther("3.0")); // Legendary
+
+// Free mint for airdrops
+await cryptDoeBucks.freeMint(recipient, quantity);
+```
+
+### Buck Attributes & Rarity System
+
+Each minted buck has:
+
+**Combat Stats:**
+- Points (base combat power)
+- Fighting Style (Aggressive/Defensive/Balanced)
+- Does Controlled (determines prize pool share)
+
+**Genetics (1-10 scale):**
+- Strength (increases attack power)
+- Speed (reduces cooldown time) 
+- Vitality (improves defense)
+- Intelligence (tactical advantages)
+
+**Rarity Tiers:**
+- Common (70%): Basic stats
+- Uncommon (20%): Improved genetics
+- Rare (7%): Strong genetics 
+- Epic (2.5%): Very strong genetics
+- Legendary (0.5%): Maximum genetics
+
+**Dynamic Attributes:**
+- Level (1-10, gained through experience)
+- Experience (earned from fighting)
+- Special Abilities (unlocked at level 5)
+
+### Gas Usage
+- Single mint: ~239k gas
+- Batch mint: ~117k gas per buck (optimized)
+- Guaranteed rarity: Similar to regular mint
+
 ## Storage Vault
 
 ```shell
