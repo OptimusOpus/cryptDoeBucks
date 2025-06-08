@@ -3,8 +3,8 @@ name: cd
 on: [push, pull_request]
 
 env:
-  SOLC_VERSION: ${{ secrets.SOLC_VERSION }}
-  SOLIDITY_OPTIMIZER: ${{ secrets.SOLIDITY_OPTIMIZER }}
+  SOLC_VERSION: ${{ secrets.SOLC_VERSION || '0.8.17' }}
+  SOLIDITY_OPTIMIZER: ${{ secrets.SOLIDITY_OPTIMIZER || 'true' }}
 
 jobs:
   cd:
@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Verify Changed sol files in the contracts directory
         uses: tj-actions/verify-changed-files@v9
@@ -27,7 +27,7 @@ jobs:
           files: contracts/*.sol
 
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
@@ -46,7 +46,7 @@ jobs:
           solc-select use ${{ env.SOLC_VERSION }}
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
 
