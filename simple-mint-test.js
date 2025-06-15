@@ -141,34 +141,15 @@ async function main() {
   const uniqueRarities = [...new Set(rarities)];
   console.log(`\n📈 Found ${uniqueRarities.length} different rarities: ${uniqueRarities.join(', ')}`);
   
-  // Test guaranteed rarity
-  console.log("\n🎯 Testing Guaranteed Rarity:");
-  const rarePrice = await cryptDoeBucks.guaranteedRarityPrices(3); // Rare
-  console.log(`Guaranteed Rare Price: ${ethers.formatEther(rarePrice)} ETH`);
-  
-  const rareTx = await cryptDoeBucks.connect(user1).mintGuaranteedRarity(3, 1, { 
-    value: rarePrice 
-  });
-  await rareTx.wait();
-  
-  const rareURI = await cryptDoeBucks.tokenURI(6);
-  const rareBase64 = rareURI.split(",")[1];
-  const rareJson = Buffer.from(rareBase64, "base64").toString("utf-8");
-  const rareMeta = JSON.parse(rareJson);
-  const rareRarityAttr = rareMeta.attributes.find(a => a.trait_type === 'Rarity');
-  
-  console.log(`✅ Guaranteed rare buck minted!`);
-  console.log(`  Buck #6 rarity: ${rareRarityAttr.value}`);
   
   // Final summary
   console.log("\n🎉 Minting Test Complete!");
   console.log("========================");
-  console.log(`Total Minted: 7 bucks`);
+  console.log(`Total Minted: 6 bucks`);
   console.log(`User Balance: ${await cryptDoeBucks.balanceOf(user1.address)}`);
   console.log(`✅ Random stats generation: WORKING`);
   console.log(`✅ Dynamic metadata: WORKING`);
   console.log(`✅ Batch discounts: WORKING`);
-  console.log(`✅ Guaranteed rarity: WORKING`);
   console.log(`✅ Ready for NFT launch! 🚀`);
 }
 

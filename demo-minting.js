@@ -102,27 +102,6 @@ async function main() {
   const uniqueRarities = [...new Set(rarities)];
   console.log(`Found ${uniqueRarities.length} different rarities: ${uniqueRarities.join(', ')}`);
   
-  // 3. Guaranteed rarity mint
-  console.log("\n3️⃣ Guaranteed Rare Mint:");
-  const rarePrice = await cryptDoeBucks.guaranteedRarityPrices(3); // Rare = index 3
-  
-  console.log(`Minting guaranteed Rare buck at ${ethers.formatEther(rarePrice)} ETH...`);
-  
-  const rareMintTx = await cryptDoeBucks.connect(user2).mintGuaranteedRarity(3, 1, { 
-    value: rarePrice 
-  });
-  await rareMintTx.wait();
-  
-  const rareTokenId = batchQuantity + 1;
-  const rareURI = await cryptDoeBucks.tokenURI(rareTokenId);
-  const rareBase64 = rareURI.split(",")[1];
-  const rareJson = Buffer.from(rareBase64, "base64").toString("utf-8");
-  const rareMeta = JSON.parse(rareJson);
-  const rareRarityAttr = rareMeta.attributes.find(a => a.trait_type === 'Rarity');
-  
-  console.log(`✅ Guaranteed rare mint completed!`);
-  console.log(`Buck #${rareTokenId} rarity: ${rareRarityAttr.value}`);
-  
   // Final stats
   console.log("\n📊 Final Collection Stats:");
   console.log("========================");
@@ -146,22 +125,11 @@ async function main() {
   console.log("==================");
   console.log(`Regular Mint: ${ethers.formatEther(mintPrice)} ETH`);
   console.log(`Batch Mint (5%↓): ${ethers.formatEther(batchPrice)} ETH`);
-  console.log(`Guaranteed Rare: ${ethers.formatEther(rarePrice)} ETH`);
-  
-  const guaranteedPrices = [];
-  for (let i = 1; i <= 5; i++) {
-    const price = await cryptDoeBucks.guaranteedRarityPrices(i);
-    const rarityNames = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
-    guaranteedPrices.push(`${rarityNames[i-1]}: ${ethers.formatEther(price)} ETH`);
-  }
-  console.log("\n🎯 Guaranteed Rarity Pricing:");
-  guaranteedPrices.forEach(p => console.log(`  ${p}`));
   
   console.log("\n🎉 Random Minting Demo Complete!");
   console.log("================================");
   console.log("✅ Single mint: WORKING");
-  console.log("✅ Batch mint: WORKING"); 
-  console.log("✅ Guaranteed rarity: WORKING");
+  console.log("✅ Batch mint: WORKING");
   console.log("✅ Dynamic metadata: WORKING");
   console.log("✅ Gas optimization: WORKING");
   console.log("\n🚀 Ready for NFT collection launch!");

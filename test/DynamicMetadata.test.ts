@@ -64,15 +64,20 @@ describe('Dynamic Metadata', function () {
     );
     await prizePool.waitForDeployment();
 
-    // Deploy MetadataLib library first
+    // Deploy required libraries first
     const MetadataLibFactory = await ethers.getContractFactory('MetadataLib');
     const metadataLib = await MetadataLibFactory.deploy();
     await metadataLib.waitForDeployment();
+
+    const RandomLibFactory = await ethers.getContractFactory('RandomLib');
+    const randomLib = await RandomLibFactory.deploy();
+    await randomLib.waitForDeployment();
 
     // Deploy CrypdoeBucks with linked library
     const CrypdoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks', {
       libraries: {
         MetadataLib: await metadataLib.getAddress(),
+        RandomLib: await randomLib.getAddress(),
       },
     });
     cryptDoeBucks = await CrypdoeBucksFactory.deploy(

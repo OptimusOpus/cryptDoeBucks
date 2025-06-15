@@ -420,7 +420,7 @@ CrypdoeBucks now features a complete NFT collection system with dynamic metadata
 
 - **Random Stats Generation**: Each buck is minted with unique genetics, combat stats, and rarity
 - **Dynamic Metadata**: Real-time JSON/SVG generation that updates as bucks level up
-- **Multiple Minting Options**: Regular, batch, guaranteed rarity, and VRF premium minting
+- **Multiple Minting Options**: Regular, batch, and VRF premium minting
 - **Weighted Rarity Distribution**: Common to Legendary rarities with proper scarcity
 - **Gas Optimization**: Batch minting with 5% discount for 5+ bucks
 
@@ -439,15 +439,7 @@ const batchPrice = (mintPrice * 95n) / 100n;
 await cryptDoeBucks.mintBuckBatch(quantity, { value: batchPrice * quantity });
 ```
 
-#### 3. Guaranteed Rarity Minting
-```javascript
-// Mint with guaranteed minimum rarity
-// Rarity tiers: 1=Common, 2=Uncommon, 3=Rare, 4=Epic, 5=Legendary
-const rarityPrice = await cryptDoeBucks.guaranteedRarityPrices(3); // Rare
-await cryptDoeBucks.mintGuaranteedRarity(3, 1, { value: rarityPrice });
-```
-
-#### 4. VRF Premium Minting (when enabled)
+#### 3. VRF Premium Minting (when enabled)
 ```javascript
 // Premium minting with Chainlink VRF for true randomness
 const premiumPrice = mintPrice + ethers.parseEther("0.01");
@@ -500,8 +492,6 @@ await cryptDoeBucks.togglePublicSale();
 // Set mint price
 await cryptDoeBucks.setMintPrice(ethers.parseEther("0.08"));
 
-// Set guaranteed rarity pricing
-await cryptDoeBucks.setGuaranteedRarityPrice(5, ethers.parseEther("3.0")); // Legendary
 
 // Free mint for airdrops
 await cryptDoeBucks.freeMint(recipient, quantity);
@@ -537,7 +527,6 @@ Each minted buck has:
 ### Gas Usage
 - Single mint: ~239k gas
 - Batch mint: ~117k gas per buck (optimized)
-- Guaranteed rarity: Similar to regular mint
 
 ## Storage Vault
 

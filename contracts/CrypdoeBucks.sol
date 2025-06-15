@@ -119,15 +119,6 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
     }
     mapping(uint256 => PendingMint) public pendingMints; // requestId => PendingMint
     
-    // Pricing for guaranteed rarity mints
-    uint256[6] public guaranteedRarityPrices = [
-        0 ether,      // Invalid (index 0)
-        0.05 ether,   // Common
-        0.1 ether,    // Uncommon  
-        0.2 ether,    // Rare
-        0.5 ether,    // Epic
-        2.0 ether     // Legendary
-    ];
 
     event FightInitiated(uint256 attacker, uint256 defender, uint256 randomRequestId);
     event FightConcluded(
@@ -150,7 +141,6 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
     event MintRequested(address indexed minter, uint256 quantity, RandomMode mode);
     event BuckMinted(address indexed to, uint256 indexed tokenId, uint32 points, uint32 style, uint32 does, string rarity);
     event BatchMinted(address indexed to, uint256 startTokenId, uint256 quantity);
-    event GuaranteedRarityMinted(address indexed to, uint256 indexed tokenId, uint8 rarity);
 
     modifier onlyOwnerOf(uint256 _id) {
         require(msg.sender == buckToOwner[_id], "Must be the buck owner");
@@ -351,24 +341,6 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
         emit MintRequested(msg.sender, quantity, RandomMode.VRF);
     }
 
-    /**
-     * @dev Guaranteed rarity mint
-     */
-    function mintGuaranteedRarity(uint8 minRarity, uint256 quantity) external payable nonReentrant whenNotPaused {
-        require(publicSaleActive, "Public sale not active");
-        require(minRarity >= 1 && minRarity <= 5, "Invalid rarity tier");
-        require(quantity > 0 && quantity <= 5, "Max 5 guaranteed rarity per tx");
-        require(mintedPerAddress[msg.sender] + quantity <= maxMintsPerAddress, "Exceeds max per address");
-        require(bucks.length + quantity <= MAX_SUPPLY, "Exceeds max supply");
-        require(msg.value >= guaranteedRarityPrices[minRarity] * quantity, "Insufficient payment for guaranteed rarity");
-        
-        mintedPerAddress[msg.sender] += quantity;
-        
-        for (uint256 i = 0; i < quantity; i++) {
-            uint256 tokenId = _mintGuaranteedRarityBuck(msg.sender, minRarity);
-            emit GuaranteedRarityMinted(msg.sender, tokenId, minRarity);
-        }
-    }
 
     /**
      * @dev Owner-only free mint for airdrops/promotions
@@ -439,16 +411,6 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
         return _mintBuckWithStats(to, stats);
     }
 
-    /**
-     * @dev Internal function to mint a buck with guaranteed rarity
-     */
-    function _mintGuaranteedRarityBuck(address to, uint8 minRarity) internal returns (uint256) {
-        uint256 tokenId = bucks.length;
-        uint256 seed = RandomLib.generateMintSeed(to, tokenId);
-        RandomLib.BuckStats memory stats = RandomLib.generateGuaranteedRarityStats(seed, minRarity);
-        
-        return _mintBuckWithStats(to, stats);
-    }
 
     /**
      * @dev Internal function to mint buck with pre-generated stats
@@ -530,13 +492,6 @@ contract CrypdoeBucks is ERC721, ERC721Burnable, Ownable, ReentrancyGuard, Pausa
         currentRandomMode = mode;
     }
 
-    /**
-     * @dev Update guaranteed rarity prices
-     */
-    function setGuaranteedRarityPrice(uint8 rarity, uint256 price) external onlyOwner {
-        require(rarity >= 1 && rarity <= 5, "Invalid rarity");
-        guaranteedRarityPrices[rarity] = price;
-    }
 
     /**
      * @dev Withdraw contract funds
