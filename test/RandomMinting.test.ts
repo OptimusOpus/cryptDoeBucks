@@ -184,33 +184,6 @@ describe('Random Minting System', function () {
     });
   });
 
-  describe('Guaranteed Rarity Minting', function () {
-    it('Should mint guaranteed rare buck', async function () {
-      const rarityPrice = await cryptDoeBucks.guaranteedRarityPrices(3); // Rare
-      
-      await expect(
-        cryptDoeBucks.connect(user1).mintGuaranteedRarity(3, 1, { value: rarityPrice })
-      ).to.emit(cryptDoeBucks, 'GuaranteedRarityMinted')
-      .withArgs(user1.address, 0, 3);
-
-      // Check metadata shows rare or better
-      const tokenURI = await cryptDoeBucks.tokenURI(0);
-      const base64Data = tokenURI.split(',')[1];
-      const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
-      const metadata = JSON.parse(jsonString);
-      
-      const rarityAttr = metadata.attributes.find((attr: any) => attr.trait_type === 'Rarity');
-      expect(['Rare', 'Epic', 'Legendary']).to.include(rarityAttr.value);
-    });
-
-    it('Should enforce guaranteed rarity payment', async function () {
-      const rarityPrice = await cryptDoeBucks.guaranteedRarityPrices(5); // Legendary
-      
-      await expect(
-        cryptDoeBucks.connect(user1).mintGuaranteedRarity(5, 1, { value: rarityPrice - BigInt(1) })
-      ).to.be.revertedWith('Insufficient payment for guaranteed rarity');
-    });
-  });
 
   describe('Admin Functions', function () {
     it('Should allow owner to adjust mint price', async function () {

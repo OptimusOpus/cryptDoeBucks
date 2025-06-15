@@ -43,24 +43,6 @@ library RandomLib {
         });
     }
 
-    /**
-     * @dev Generate random stats with guaranteed minimum rarity
-     */
-    function generateGuaranteedRarityStats(uint256 seed, uint8 minRarity) external pure returns (BuckStats memory) {
-        require(minRarity >= 1 && minRarity <= 5, "Invalid rarity tier");
-        
-        uint256 pointsSeed = (seed >> 0) & 0xFFFFFFFF;
-        uint256 styleSeed = (seed >> 32) & 0xFFFFFFFF;
-        uint256 doesSeed = (seed >> 64) & 0xFFFFFFFF;
-        uint256 geneticsSeed = (seed >> 96) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
-        
-        return BuckStats({
-            points: generateEnhancedPoints(pointsSeed, minRarity),
-            fightingStyle: generateFightingStyle(styleSeed),
-            does: generateEnhancedDoes(doesSeed, minRarity),
-            genetics: generateGuaranteedGenetics(geneticsSeed, RarityTier(minRarity - 1))
-        });
-    }
 
     /**
      * @dev Generate combat points with bell curve distribution (50-100 range)
@@ -74,22 +56,6 @@ library RandomLib {
         // Average of 3 rolls creates bell curve, then shift to 50-100 range
         uint256 average = (roll1 + roll2 + roll3) / 3;
         return uint32(50 + average);
-    }
-
-    /**
-     * @dev Generate enhanced points for guaranteed rarity
-     */
-    function generateEnhancedPoints(uint256 seed, uint8 minRarity) internal pure returns (uint32) {
-        uint256 basePoints = generatePoints(seed);
-        
-        // Add bonus based on rarity tier
-        uint256 bonus = 0;
-        if (minRarity >= 2) bonus += 5;  // Uncommon+
-        if (minRarity >= 3) bonus += 5;  // Rare+
-        if (minRarity >= 4) bonus += 10; // Epic+
-        if (minRarity >= 5) bonus += 10; // Legendary
-        
-        return uint32(basePoints + bonus);
     }
 
     /**
@@ -115,21 +81,6 @@ library RandomLib {
     }
 
     /**
-     * @dev Generate enhanced does count for guaranteed rarity
-     */
-    function generateEnhancedDoes(uint256 seed, uint8 minRarity) internal pure returns (uint32) {
-        uint32 baseDoes = generateDoes(seed);
-        
-        // Guarantee minimum does based on rarity
-        uint32 minDoes = 1;
-        if (minRarity >= 3) minDoes = 2;  // Rare+
-        if (minRarity >= 4) minDoes = 3;  // Epic+
-        if (minRarity >= 5) minDoes = 5;  // Legendary
-        
-        return baseDoes > minDoes ? baseDoes : minDoes;
-    }
-
-    /**
      * @dev Generate genetics with natural rarity distribution
      */
     function generateGenetics(uint256 seed) internal pure returns (Genetics memory) {
@@ -149,13 +100,13 @@ library RandomLib {
             tier = RarityTier.COMMON;
         }
         
-        return generateGuaranteedGenetics(seed, tier);
+        return generateTierGenetics(seed, tier);
     }
 
     /**
      * @dev Generate genetics for specific rarity tier
      */
-    function generateGuaranteedGenetics(uint256 seed, RarityTier tier) internal pure returns (Genetics memory) {
+    function generateTierGenetics(uint256 seed, RarityTier tier) internal pure returns (Genetics memory) {
         uint8 minStat;
         uint8 maxStat;
         

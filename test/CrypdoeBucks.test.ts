@@ -100,8 +100,22 @@ describe('CrypdoeBucks', () => {
       value: ethers.parseEther('3.0'), // Send 3 ETH to the contract
     });
 
-    // Now deploy CrypdoeBucks with the correct parameters
-    CrypdoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks');
+    // Deploy required libraries
+    const MetadataLibFactory = await ethers.getContractFactory('MetadataLib');
+    const metadataLib = await MetadataLibFactory.deploy();
+    await metadataLib.waitForDeployment();
+
+    const RandomLibFactory = await ethers.getContractFactory('RandomLib');
+    const randomLib = await RandomLibFactory.deploy();
+    await randomLib.waitForDeployment();
+
+    // Now deploy CrypdoeBucks with linked libraries
+    CrypdoeBucksFactory = await ethers.getContractFactory('CrypdoeBucks', {
+      libraries: {
+        MetadataLib: await metadataLib.getAddress(),
+        RandomLib: await randomLib.getAddress(),
+      },
+    });
     crypdoeBucks = await CrypdoeBucksFactory.deploy(
       randomNumberConsumerV2Address,
       prizePoolAddress,
