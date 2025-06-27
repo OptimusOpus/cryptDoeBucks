@@ -1,5 +1,5 @@
-import { useMemo, useCallback } from 'react';
 import { ethers } from 'ethers';
+import { useMemo, useCallback } from 'react';
 
 /* -------------------------------------------------------------------------- */
 /*                          Generic contract helper                           */

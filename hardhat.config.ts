@@ -71,7 +71,7 @@ const config: HardhatUserConfig = {
         false,
     },
     localhost: {
-      url: "http://127.0.0.1:8545/",
+      url: 'http://127.0.0.1:8545/',
       // chainId: 31337, // Hardhat's default chainId for the node network
       // accounts: Hardhat provides default accounts when running `npx hardhat node`
       // No need to specify accounts here unless you want to override the node's defaults

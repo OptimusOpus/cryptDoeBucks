@@ -47,11 +47,11 @@ library MetadataLib {
         string memory attributes = generateAttributes(buck);
 
         return string(abi.encodePacked(
-            '{"name":"', name, '",',
-            '"description":"', description, '",',
-            '"image":"', image, '",',
-            '"external_url":"https://cryptdoebucks.com/buck/', toString(tokenId), '",',
-            '"attributes":[', attributes, ']}'
+            "{'name':'", name, "',",
+            "'description':'", description, "',",
+            "'image':'", image, "',",
+            "'external_url':'https://cryptdoebucks.com/buck/", toString(tokenId), "',",
+            "'attributes':[", attributes, "]}"
         ));
     }
 
@@ -96,20 +96,20 @@ library MetadataLib {
         string memory specialGlow = buck.hasSpecialAbility ? generateSpecialGlow() : "";
 
         return string(abi.encodePacked(
-            '<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">',
-            '<defs>',
-            '<linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">',
-            '<stop offset="0%" style="stop-color:', bgColor1, '"/>',
-            '<stop offset="100%" style="stop-color:', bgColor2, '"/>',
-            '</linearGradient>',
-            '</defs>',
-            '<rect width="400" height="400" fill="url(#bg)"/>',
+            "<svg width='400' height='400' xmlns='http://www.w3.org/2000/svg'>",
+            "<defs>",
+            "<linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'>",
+            "<stop offset='0%' style='stop-color:", bgColor1, "'/>",
+            "<stop offset='100%' style='stop-color:", bgColor2, "'/>",
+            "</linearGradient>",
+            "</defs>",
+            "<rect width='400' height='400' fill='url(#bg)'/>",
             specialGlow,
             generateBuckSilhouette(),
             levelRing,
             statBars,
             generateFightingStyleIcon(buck.fightingStyle),
-            '</svg>'
+            "</svg>"
         ));
     }
 
@@ -118,18 +118,18 @@ library MetadataLib {
      */
     function generateAttributes(Buck memory buck) internal pure returns (string memory) {
         return string(abi.encodePacked(
-            '{"trait_type":"Level","value":', toString(buck.level), ',"max_value":10},',
-            '{"trait_type":"Points","value":', toString(buck.points), '},',
-            '{"trait_type":"Fighting Style","value":"', getFightingStyleName(buck.fightingStyle), '"},',
-            '{"trait_type":"Does Controlled","value":', toString(buck.does), '},',
-            '{"trait_type":"Experience","value":', toString(buck.experience), '},',
-            '{"trait_type":"Strength","value":', toString(buck.genetics.strength), ',"max_value":10},',
-            '{"trait_type":"Speed","value":', toString(buck.genetics.speed), ',"max_value":10},',
-            '{"trait_type":"Vitality","value":', toString(buck.genetics.vitality), ',"max_value":10},',
-            '{"trait_type":"Intelligence","value":', toString(buck.genetics.intelligence), ',"max_value":10},',
-            '{"trait_type":"Special Ability","value":"', buck.hasSpecialAbility ? "Unlocked" : "Locked", '"},',
-            '{"trait_type":"Rarity","value":"', calculateRarity(buck), '"},',
-            '{"trait_type":"Total Stats","value":', toString(getTotalStats(buck)), ',"max_value":40}'
+            "{'trait_type':'Level','value':", toString(buck.level), ",'max_value':10},",
+            "{'trait_type':'Points','value':", toString(buck.points), "},",
+            "{'trait_type':'Fighting Style','value':'", getFightingStyleName(buck.fightingStyle), "'},",
+            "{'trait_type':'Does Controlled','value':", toString(buck.does), "},",
+            "{'trait_type':'Experience','value':", toString(buck.experience), "},",
+            "{'trait_type':'Strength','value':", toString(buck.genetics.strength), ",'max_value':10},",
+            "{'trait_type':'Speed','value':", toString(buck.genetics.speed), ",'max_value':10},",
+            "{'trait_type':'Vitality','value':", toString(buck.genetics.vitality), ",'max_value':10},",
+            "{'trait_type':'Intelligence','value':", toString(buck.genetics.intelligence), ",'max_value':10},",
+            "{'trait_type':'Special Ability','value':'", buck.hasSpecialAbility ? "Unlocked" : "Locked", "'},",
+            "{'trait_type':'Rarity','value':'", calculateRarity(buck), "'},",
+            "{'trait_type':'Total Stats','value':", toString(getTotalStats(buck)), ",'max_value':40}"
         ));
     }
 
@@ -186,10 +186,10 @@ library MetadataLib {
         uint256 progress = (uint256(level) * 360) / 10; // Convert level to degrees
         
         return string(abi.encodePacked(
-            '<circle cx="200" cy="200" r="180" fill="none" stroke="#000" stroke-width="4" opacity="0.3"/>',
-            '<circle cx="200" cy="200" r="180" fill="none" stroke="#FFF" stroke-width="4" ',
-            'stroke-dasharray="', toString(progress * 31416 / 360), ' 1131" ',
-            'stroke-dashoffset="283" transform="rotate(-90 200 200)"/>'
+            "<circle cx='200' cy='200' r='180' fill='none' stroke='#000' stroke-width='4' opacity='0.3'/>",
+            "<circle cx='200' cy='200' r='180' fill='none' stroke='#FFF' stroke-width='4' ",
+            "stroke-dasharray='", toString(progress * 31416 / 360), " 1131' ",
+            "stroke-dashoffset='283' transform='rotate(-90 200 200)'/>"
         ));
     }
 
@@ -212,9 +212,9 @@ library MetadataLib {
         uint256 width = (uint256(value) * 80) / 10; // Max width 80px for value 10
         
         return string(abi.encodePacked(
-            '<text x="20" y="', toString(y), '" fill="#FFF" font-size="12" font-family="monospace">', label, '</text>',
-            '<rect x="50" y="', toString(y - 10), '" width="80" height="8" fill="#333" stroke="#FFF"/>',
-            '<rect x="50" y="', toString(y - 10), '" width="', toString(width), '" height="8" fill="#0F0"/>'
+            "<text x='20' y='", toString(y), "' fill='#FFF' font-size='12' font-family='monospace'>", label, "</text>",
+            "<rect x='50' y='", toString(y - 10), "' width='80' height='8' fill='#333' stroke='#FFF'/>",
+            "<rect x='50' y='", toString(y - 10), "' width='", toString(width), "' height='8' fill='#0F0'/>"
         ));
     }
 
@@ -223,12 +223,12 @@ library MetadataLib {
      */
     function generateBuckSilhouette() internal pure returns (string memory) {
         return string(abi.encodePacked(
-            '<ellipse cx="200" cy="220" rx="60" ry="80" fill="#8B4513"/>',
-            '<ellipse cx="200" cy="180" rx="40" ry="50" fill="#A0522D"/>',
-            '<polygon points="170,150 180,120 190,150" fill="#654321"/>',
-            '<polygon points="220,150 210,120 200,150" fill="#654321"/>',
-            '<circle cx="185" cy="170" r="3" fill="#000"/>',
-            '<circle cx="215" cy="170" r="3" fill="#000"/>'
+            "<ellipse cx='200' cy='220' rx='60' ry='80' fill='#8B4513'/>",
+            "<ellipse cx='200' cy='180' rx='40' ry='50' fill='#A0522D'/>",
+            "<polygon points='170,150 180,120 190,150' fill='#654321'/>",
+            "<polygon points='220,150 210,120 200,150' fill='#654321'/>",
+            "<circle cx='185' cy='170' r='3' fill='#000'/>",
+            "<circle cx='215' cy='170' r='3' fill='#000'/>"
         ));
     }
 
@@ -237,11 +237,11 @@ library MetadataLib {
      */
     function generateFightingStyleIcon(uint32 style) internal pure returns (string memory) {
         if (style == 1) { // Aggressive - Sword
-            return '<polygon points="350,50 370,50 370,70 360,70 360,80 350,80" fill="#FF0000"/>';
+            return "<polygon points='350,50 370,50 370,70 360,70 360,80 350,80' fill='#FF0000'/>";
         } else if (style == 2) { // Defensive - Shield
-            return '<ellipse cx="360" cy="60" rx="15" ry="20" fill="#0000FF" stroke="#FFF" stroke-width="2"/>';
+            return "<ellipse cx='360' cy='60' rx='15' ry='20' fill='#0000FF' stroke='#FFF' stroke-width='2'/>";
         } else { // Balanced - Star
-            return '<polygon points="360,45 365,55 375,55 367,62 370,72 360,67 350,72 353,62 345,55 355,55" fill="#FFD700"/>';
+            return "<polygon points='360,45 365,55 375,55 367,62 370,72 360,67 350,72 353,62 345,55 355,55' fill='#FFD700'/>";
         }
     }
 
@@ -250,13 +250,13 @@ library MetadataLib {
      */
     function generateSpecialGlow() internal pure returns (string memory) {
         return string(abi.encodePacked(
-            '<defs>',
-            '<filter id="glow">',
-            '<feGaussianBlur stdDeviation="4" result="coloredBlur"/>',
-            '<feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>',
-            '</filter>',
-            '</defs>',
-            '<circle cx="200" cy="200" r="190" fill="none" stroke="#FFD700" stroke-width="2" filter="url(#glow)" opacity="0.7"/>'
+            "<defs>",
+            "<filter id='glow'>",
+            "<feGaussianBlur stdDeviation='4' result='coloredBlur'/>",
+            "<feMerge><feMergeNode in='coloredBlur'/><feMergeNode in='SourceGraphic'/></feMerge>",
+            "</filter>",
+            "</defs>",
+            "<circle cx='200' cy='200' r='190' fill='none' stroke='#FFD700' stroke-width='2' filter='url(#glow)' opacity='0.7'/>"
         ));
     }
 
